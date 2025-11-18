@@ -1,1 +1,1 @@
-# MoZhiCourse
+# MZCourse
