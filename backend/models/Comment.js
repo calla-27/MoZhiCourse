@@ -19,9 +19,9 @@ class CommentModel {
       FROM t_video_comment c
       LEFT JOIN t_user u ON c.user_id = u.user_id
       WHERE c.video_id = ?
-      ORDER BY c.created_time ASC
+      ORDER BY c.created_time DESC
     `;
-    
+
     const [rows] = await db.execute(sql, [videoId]);
     return rows;
   }

@@ -8,6 +8,7 @@ const VideoController = require('../controllers/videoController');
 router.get('/', CourseController.getAllCourses);
 router.get('/:courseId', CourseController.getCourse);
 router.get('/:courseId/chapters', CourseController.getChapters);
+router.get('/:courseId/stats', CourseController.getStats);
 
 // 视频相关路由
 router.get('/video/:videoId', VideoController.getVideo);

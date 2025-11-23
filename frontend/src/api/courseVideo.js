@@ -11,6 +11,11 @@ export const getCourseChapters = (courseId) => {
   return request.get(`/course/${courseId}/chapters`) 
 }
 
+export const getCourseStats = (courseId) => {
+  // 后端: /api/course/:courseId/stats => 前端路径: /course/:courseId/stats
+  return request.get(`/course/${courseId}/stats`)
+}
+
 export const getCourseProgress = (courseId) => {
   // ⚠️ 注意：此接口 (/courses/:courseId/progress) 在您的后端 API 列表中未明确列出。
   // 如果后端没有此路由，前端调用将失败。

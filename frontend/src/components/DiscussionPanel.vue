@@ -11,8 +11,16 @@
     </div>
 
     <div class="discussion-stats">
-      <span>在线: {{ onlineCount }}人</span>
-      <span>讨论: {{ totalDiscussions }}条</span>
+      <div class="discussion-stat-item">
+        <i class="fas fa-signal"></i>
+        <span class="label">在线</span>
+        <span class="value">{{ onlineCount }}人</span>
+      </div>
+      <div class="discussion-stat-item">
+        <i class="fas fa-comment-dots"></i>
+        <span class="label">讨论</span>
+        <span class="value">{{ totalDiscussions }}条</span>
+      </div>
     </div>
 
     <!-- 搜索和筛选区域 -->
@@ -143,7 +151,7 @@
           <i class="fas fa-paper-plane"></i>
           发送
         </button>
-        <button class="btn btn-secondary">
+        <button class="btn btn-secondary" type="button" title="常用表情">
           <i class="fas fa-smile"></i>
         </button>
       </div>
@@ -154,6 +162,15 @@
 <script>
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { postComment, likeComment } from "@/api/comment";
+
+const debounce = (fn, delay = 300) => {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+};
+
 export default {
   name: "DiscussionPanel",
   props: {
@@ -172,6 +189,8 @@ export default {
     const newMessage = ref("");
     const searchKeyword = ref("");
     const sortBy = ref("latest");
+    const debouncedSearch = ref(null);
+
     const replyingTo = ref(null);
     const replyContent = ref("");
     const onlineCount = ref(128);
@@ -183,19 +202,37 @@ export default {
     });
 
     const filteredDiscussions = computed(() => {
-      let discussions = [...props.discussions];
+      const keyword = searchKeyword.value.trim().toLowerCase();
+      const normalizedDiscussions = props.discussions.map((discussion) => ({
+        ...discussion,
+        replies: Array.isArray(discussion.replies) ? discussion.replies : [],
+      }));
 
-      // 搜索过滤
-      if (searchKeyword.value.trim()) {
-        const keyword = searchKeyword.value.toLowerCase();
-        discussions = discussions.filter(
-          (discussion) =>
-            discussion.comment_content.toLowerCase().includes(keyword) ||
-            discussion.user_name.toLowerCase().includes(keyword)
-        );
+      let discussions = normalizedDiscussions;
+
+      if (keyword) {
+        discussions = normalizedDiscussions.reduce((acc, discussion) => {
+          const replies = discussion.replies || [];
+          const parentMatch =
+            (discussion.comment_content || "").toLowerCase().includes(keyword) ||
+            (discussion.user_name || "").toLowerCase().includes(keyword);
+
+          const matchedReplies = replies.filter(
+            (reply) =>
+              (reply.comment_content || "").toLowerCase().includes(keyword) ||
+              (reply.user_name || "").toLowerCase().includes(keyword)
+          );
+
+          if (parentMatch) {
+            acc.push({ ...discussion });
+          } else if (matchedReplies.length > 0) {
+            acc.push({ ...discussion, replies: matchedReplies });
+          }
+
+          return acc;
+        }, []);
       }
 
-      // 排序
       if (sortBy.value === "latest") {
         discussions.sort(
           (a, b) => new Date(b.create_time) - new Date(a.create_time)
@@ -212,41 +249,58 @@ export default {
       if (!newMessage.value.trim()) return;
 
       try {
-        // ✅ 使用正确的参数结构
+        // 
         await postComment({
           videoId: props.videoId,
           userId: currentUserId.value,
           content: newMessage.value.trim(),
-          // parentId 不传表示主评论
+          // parentId 
         });
 
         newMessage.value = "";
         emit("send-message", newMessage.value);
 
-        // 可以添加成功提示
-        console.log("评论发送成功");
+        // 
+        console.log("");
 
         scrollToBottom();
       } catch (error) {
-        console.error("发送消息失败:", error);
-        alert("发送失败，请稍后重试");
+        console.error("", error);
+        alert("");
+      }
+    };
+
+    const emitSearch = () => {
+      if (!props.videoId) return;
+      emit("search", {
+        keyword: searchKeyword.value,
+        sort: sortBy.value,
+      });
+    };
+
+    const initDebounce = () => {
+      if (!debouncedSearch.value) {
+        debouncedSearch.value = debounce(emitSearch, 300);
       }
     };
 
     const handleSearch = () => {
-      emit("search", searchKeyword.value);
+      if (!props.videoId) return;
+      initDebounce();
+      debouncedSearch.value();
     };
 
     const handleSortChange = () => {
-      // 排序变化时自动处理
+      if (!props.videoId) return;
+      emitSearch();
     };
 
     const handleLike = async (commentId) => {
       try {
-        await likeComment(commentId); // 使用正确的函数名
+        await likeComment(commentId); // 
         emit("like", commentId);
       } catch (error) {
-        console.error("点赞失败:", error);
+        console.error("", error);
       }
     };
 
@@ -262,16 +316,16 @@ export default {
           videoId: props.videoId,
           content: replyContent.value.trim(),
           userId: currentUserId.value,
-          parentId: parentCommentId, // 关键：传递 parentId 表示这是回复
+          parentId: parentCommentId, // 
         });
         replyContent.value = "";
         replyingTo.value = null;
         emit("reply", { parentCommentId, content: replyContent.value });
 
-        // 可以在这里触发重新获取评论列表
+        // 
       } catch (error) {
-        console.error("回复失败:", error);
-        alert("回复失败，请稍后重试");
+        console.error("", error);
+        alert("");
       }
     };
 
@@ -280,27 +334,27 @@ export default {
       replyContent.value = "";
     };
 
-    // 格式化时间
+    // 
     const formatTime = (timeString) => {
       const time = new Date(timeString);
       const now = new Date();
       const diff = now - time;
 
       if (diff < 60000) {
-        // 1分钟内
-        return "刚刚";
+        // 1
+        return "";
       } else if (diff < 3600000) {
-        // 1小时内
-        return `${Math.floor(diff / 60000)}分钟前`;
+        // 1
+        return `${Math.floor(diff / 60000)}`;
       } else if (diff < 86400000) {
-        // 1天内
-        return `${Math.floor(diff / 3600000)}小时前`;
+        // 1
+        return `${Math.floor(diff / 3600000)}`;
       } else {
         return time.toLocaleDateString();
       }
     };
 
-    // 滚动到底部
+    // 
     const scrollToBottom = () => {
       nextTick(() => {
         if (discussionContent.value) {
@@ -310,7 +364,7 @@ export default {
       });
     };
 
-    // 监听讨论数据变化
+    // 
     watch(
       () => props.discussions,
       () => {

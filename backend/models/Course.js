@@ -39,6 +39,32 @@ class Course {
     );
     return courses;
   }
+
+  static async getStats(courseId) {
+    const [[participantRow]] = await db.execute(
+      `SELECT COUNT(DISTINCT user_id) AS participatingUsers
+       FROM t_learning_detail
+       WHERE course_id = ?`,
+      [courseId]
+    );
+
+    const [[commentRow]] = await db.execute(
+      `SELECT COUNT(*) AS totalComments
+       FROM t_video_comment vc
+       LEFT JOIN t_course_video cv ON vc.video_id = cv.video_id
+       LEFT JOIN t_course_chapter cc ON cv.chapter_id = cc.chapter_id
+       WHERE cc.course_id = ?`,
+      [courseId]
+    );
+
+    const participatingUsers = participantRow?.participatingUsers ?? 0;
+    const totalComments = commentRow?.totalComments ?? 0;
+
+    return {
+      participatingUsers,
+      totalComments,
+    };
+  }
 }
 
 module.exports = Course;

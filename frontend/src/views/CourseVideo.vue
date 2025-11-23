@@ -44,38 +44,48 @@
           <p v-if="chapters.length > 0">您也可以从左侧列表中选择章节。</p>
         </div>
         
-        <AIAssistant 
-          class="ai-assistant-scrollable"
-          @question-submit="handleAIQuestion" 
-          :video-id="currentVideo.video_id"
-        />
+        <template v-if="currentVideo.video_id && currentCourse.course_id">
+          <AIAssistant 
+            class="ai-assistant-scrollable"
+            @question-submit="handleAIQuestion" 
+            :video-id="currentVideo.video_id"
+            :course-id="currentCourse.course_id"
+          />
+        </template>
+        <div v-else class="ai-assistant-placeholder">
+          <i class="fas fa-robot"></i>
+          <p>请选择左侧章节以启用 AI 学习助手。</p>
+        </div>
       </section>
 
       <aside class="discussion-section">
-        <div class="discussion-stats">
-          <span>👥 参与用户: {{ participatingUsers }}</span>
-          <span>💬 累计评论: {{ totalComments }}</span>
+        <template v-if="currentVideo.video_id">
+          <DiscussionPanel
+            :video-id="currentVideo.video_id"
+            :discussions="discussions"
+            @send-message="handleSendMessage"
+            @discussion-search="handleDiscussionSearch"
+            @like-discussion="handleLikeDiscussion"
+            @reply-discussion="handleReplyDiscussion"
+          />
+        </template>
+        <div v-else class="discussion-placeholder">
+          <i class="fas fa-comments"></i>
+          <p>请选择一个视频以查看讨论区内容。</p>
         </div>
-        <DiscussionPanel
-          :video-id="currentVideo.video_id"
-          :discussions="discussions"
-          @send-message="handleSendMessage"
-          @discussion-search="handleDiscussionSearch"
-          @like-discussion="handleLikeDiscussion"
-          @reply-discussion="handleReplyDiscussion"
-        />
       </aside>
     </main>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import ChapterList from "@/components/ChapterList.vue";
 import CourseVideoPlayer from "@/components/CourseVideoPlayer.vue";
 import AIAssistant from "@/components/AIAssistant.vue";
 import DiscussionPanel from "@/components/DiscussionPanel.vue";
+
 import {
   getCourseDetail,
   getCourseChapters,
@@ -99,17 +109,16 @@ export default {
     const courseId = route.params.courseId || 7;
     const videoId = route.params.videoId || 1;
 
-    // 响应式数据
     const currentCourse = ref({});
     const currentVideo = ref({});
     const chapters = ref([]);
     const discussions = ref([]);
+    const discussionFilters = reactive({
+      keyword: "",
+      sort: "latest",
+    });
     const userInfo = ref({});
     const learningProgress = ref(0);
-    // 新增统计数据
-    const participatingUsers = ref(0);
-    const totalComments = ref(0);
-
 
     const fetchUserInfo = async () => {
       try {
@@ -122,19 +131,6 @@ export default {
       } catch (error) {
         console.error("获取用户信息失败:", error);
       }
-    };
-    
-    // 新增：获取参与用户和累计评论数
-    const fetchStats = async () => {
-        try {
-            // 🚨 实际应用中：这里应该调用一个新的 API 接口来获取这些统计数据
-            console.log("获取统计数据...");
-            // 模拟数据
-            participatingUsers.value = 852; 
-            totalComments.value = 1345; 
-        } catch (error) {
-            console.error("获取统计数据失败:", error);
-        }
     };
 
     // 获取视频URL
@@ -159,8 +155,7 @@ export default {
         const [courseRes, chaptersRes, videoRes] = await Promise.all([
           getCourseDetail(courseId),
           getCourseChapters(courseId),
-          getVideoDetail(initialVideoId), 
-          fetchStats() // 异步获取统计数据
+          getVideoDetail(initialVideoId),
         ]);
 
         currentCourse.value = courseRes.data || {};
@@ -170,12 +165,13 @@ export default {
         if (currentVideo.value.video_id) {
           await Promise.all([fetchLearningProgress(), fetchDiscussions()]);
         } else if (chapters.value.length > 0) {
-            const firstVideo = chapters.value.flatMap(c => c.videos).find(v => v);
-            if (firstVideo) {
-                console.log("初始视频无数据，尝试加载第一个视频:", firstVideo);
-                // 使用 nextTick 或确保 DOM 准备好
-                await handleVideoChange(firstVideo);
-            }
+          const firstVideo = chapters.value
+            .flatMap((chapter) => chapter.videos)
+            .find((video) => video);
+          if (firstVideo) {
+            console.log("初始视频无数据，尝试加载第一个视频:", firstVideo);
+            await handleVideoChange(firstVideo);
+          }
         }
       } catch (error) {
         console.error("获取课程数据失败:", error);
@@ -204,13 +200,16 @@ export default {
       }
       try {
         // 🚨 实际应用中，还需要获取回复，或者 DiscussionPanel 内部处理树形结构
-        const res = await getComments(currentVideo.value.video_id);
+        const res = await getComments(currentVideo.value.video_id, {
+          keyword: discussionFilters.keyword,
+          sort: discussionFilters.sort,
+        });
         discussions.value = res.data || [];
       } catch (error) {
         console.error("获取讨论数据失败:", error);
       }
     };
-    
+
     // 切换视频
     const handleVideoChange = async (video) => {
       currentVideo.value = video;
@@ -251,27 +250,36 @@ export default {
     };
 
     // 发送讨论消息 (🚨 需实现 API 调用)
-    const handleSendMessage = async (message) => {
-      console.log("发送讨论消息:", message);
-      // 实际：调用发送讨论 API，并刷新讨论列表
+    const handleSendMessage = async () => {
+      await fetchDiscussions();
     };
 
     // 搜索讨论 (🚨 需实现 API 调用)
-    const handleDiscussionSearch = (keyword) => {
-      console.log("搜索讨论关键词:", keyword);
-      // 实际：调用搜索 API
+    const handleDiscussionSearch = (payload) => {
+      if (typeof payload === "string") {
+        discussionFilters.keyword = payload;
+      } else if (payload && typeof payload === "object") {
+        if (Object.prototype.hasOwnProperty.call(payload, "keyword")) {
+          discussionFilters.keyword = payload.keyword || "";
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, "sort")) {
+          discussionFilters.sort = payload.sort || "latest";
+        }
+      }
+
+      fetchDiscussions();
     };
 
     // 点赞讨论 (🚨 需实现 API 调用)
     const handleLikeDiscussion = (commentId) => {
       console.log("点赞讨论 ID:", commentId);
-      // 实际：调用点赞 API
+      fetchDiscussions();
     };
 
     // 回复讨论 (🚨 需实现 API 调用)
     const handleReplyDiscussion = (replyData) => {
       console.log("回复讨论数据:", replyData);
-      // 实际：调用回复 API
+      fetchDiscussions();
     };
 
     onMounted(() => {
@@ -284,10 +292,9 @@ export default {
       currentVideo,
       chapters,
       discussions,
+      discussionFilters,
       userInfo,
       learningProgress,
-      participatingUsers, // 暴露给模板
-      totalComments,      // 暴露给模板
       getVideoUrl,
       handleVideoChange,
       handleProgressUpdate,
@@ -300,11 +307,9 @@ export default {
     };
   },
 };
+
 </script>
 
-### CourseVideo.vue (Style)
-
-```css
 <style scoped>
 .course-video-container {
   height: 100vh;
@@ -371,7 +376,7 @@ export default {
     flex-grow: 1; /* 占据所有剩余空间 */
     min-height: 0; /* 确保在 flex 容器中可以正确滚动 */
     /* 假设 AIAssistant 内部已经设置了 overflow-y: auto */
-    /* ⚠️ 如果 AIAssistant 内部没有滚动，需要在此处添加 overflow-y: auto */
+    /* 如果 AIAssistant 内部没有滚动，需要在此处添加 overflow-y: auto */
 }
 
 /* 3. 讨论区：确保其可以滚动 */
@@ -382,19 +387,8 @@ export default {
     overflow-y: auto; 
 }
 
-.discussion-stats {
-    padding: 10px 15px;
-    background: #f0f0f0;
-    border-bottom: 1px solid #ddd;
-    display: flex;
-    justify-content: space-around;
-    font-size: 0.9rem;
-    color: #555;
-    flex-shrink: 0; /* 确保统计数据不随评论区滚动 */
-}
-
 /* 假设 DiscussionPanel 占据剩余空间并可滚动 */
-/* ⚠️ 如果 DiscussionPanel 内部没有滚动，需要为其添加样式: flex-grow: 1; overflow-y: auto; */
+/* 如果 DiscussionPanel 内部没有滚动，需要为其添加样式: flex-grow: 1; overflow-y: auto; */
 
 /* --- 导航栏样式 (保持不变) --- */
 .navbar {

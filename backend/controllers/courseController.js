@@ -72,6 +72,20 @@ class CourseController {
       res.status(500).json(errorResponse('服务器内部错误'));
     }
   }
+
+  static async getStats(req, res) {
+    try {
+      const { courseId } = req.params;
+      console.log(`📈 获取课程统计: courseId=${courseId}`);
+
+      const stats = await Course.getStats(courseId);
+
+      res.json(successResponse(stats));
+    } catch (error) {
+      console.error('获取课程统计失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
 }
 
 module.exports = CourseController;

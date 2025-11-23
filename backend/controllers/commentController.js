@@ -2,9 +2,13 @@ const commentModel = require('../models/Comment');
 
 const getComments = async (req, res) => {
   const { videoId } = req.params;
+  const { keyword = '', sort = 'latest' } = req.query;
   try {
     // 获取视频的所有评论（包括回复）
-    const comments = await commentModel.getCommentsByVideoId(videoId);
+    const comments = await commentModel.getCommentsByVideoId(videoId, {
+      keyword,
+      sort,
+    });
     
     // 将评论按层级组织：主评论和回复
     const mainComments = comments.filter(comment => !comment.parent_comment_id);
@@ -14,7 +18,9 @@ const getComments = async (req, res) => {
     const organizedComments = mainComments.map(comment => {
       return {
         ...comment,
-        replies: replies.filter(reply => reply.parent_comment_id === comment.comment_id)
+        replies: replies
+          .filter(reply => reply.parent_comment_id === comment.comment_id)
+          .sort((a, b) => new Date(a.created_time) - new Date(b.created_time))
       };
     });
     
