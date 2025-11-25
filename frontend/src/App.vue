@@ -34,11 +34,12 @@ export default {
 body {
   background-color: var(--light);
   color: var(--dark);
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  /* 允许页面纵向滚动（之前设置为 hidden 导致整个页面无法滚动） */
+  overflow-y: auto;
 }
 
 #app {
-  height: 100vh;
+  min-height: 100vh;
 }
 </style>

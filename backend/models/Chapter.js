@@ -1,10 +1,10 @@
 // models/Chapter.js
-const db = require('../config/database');
+const { pool } = require('../config/database');
 
 class Chapter {
   // 获取课程的所有章节
   static async getByCourseId(courseId) {
-    const [chapters] = await db.execute(
+    const [chapters] = await pool.execute(
       `SELECT 
         chapter_id,
         chapter_title,
@@ -20,7 +20,7 @@ class Chapter {
 
   // 获取章节的视频列表
   static async getVideos(chapterId) {
-    const [videos] = await db.execute(
+    const [videos] = await pool.execute(
       `SELECT 
         video_id,
         video_title,

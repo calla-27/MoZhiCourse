@@ -86,6 +86,126 @@ class CourseController {
       res.status(500).json(errorResponse('服务器内部错误'));
     }
   }
+
+  // 获取当前用户是否收藏该课程
+  static async getFavoriteStatus(req, res) {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user.userId;
+
+      const isFavorite = await Course.getFavoriteStatus(userId, courseId);
+
+      res.json(successResponse({ isFavorite }));
+    } catch (error) {
+      console.error('获取课程收藏状态失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
+
+  // 切换或设置收藏状态
+  static async toggleFavorite(req, res) {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user.userId;
+
+      // 如果前端传了 isFavorite，则按传入值设置；否则在当前状态基础上取反
+      let { isFavorite } = req.body || {};
+      if (typeof isFavorite === 'undefined') {
+        const current = await Course.getFavoriteStatus(userId, courseId);
+        isFavorite = !current;
+      }
+
+      const finalStatus = await Course.setFavoriteStatus(userId, courseId, !!isFavorite);
+
+      res.json(successResponse({ isFavorite: finalStatus }));
+    } catch (error) {
+      console.error('更新课程收藏状态失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
+
+  // 搜索课程
+  static async searchCourses(req, res) {
+    try {
+      const { q } = req.query;
+      console.log(`🔍 搜索课程: "${q}"`);
+
+      if (!q || q.trim() === '') {
+        // 如果没有搜索关键词，返回所有课程
+        const courses = await Course.getAll();
+        console.log(`✅ 返回所有课程: ${courses.length} 个`);
+        return res.json(successResponse(courses));
+      }
+
+      const courses = await Course.search(q.trim());
+      console.log(`✅ 找到 ${courses.length} 个相关课程`);
+
+      res.json(successResponse(courses));
+    } catch (error) {
+      console.error('搜索课程失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
+
+  // 获取课程评价列表
+  static async getCourseReviews(req, res) {
+    try {
+      const { courseId } = req.params;
+      const limit = parseInt(req.query.limit) || 10;
+      
+      const reviews = await Course.getCourseReviews(courseId, limit);
+      
+      res.json(successResponse(reviews));
+    } catch (error) {
+      console.error('获取课程评价失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
+
+  // 获取相关课程推荐
+  static async getRelatedCourses(req, res) {
+    try {
+      const { courseId } = req.params;
+      const limit = parseInt(req.query.limit) || 4;
+      
+      // 先获取当前课程的分类
+      const course = await Course.getById(courseId);
+      if (!course) {
+        return res.status(404).json(notFoundResponse('课程不存在'));
+      }
+      
+      const relatedCourses = await Course.getRelatedCourses(courseId, course.category_id, limit);
+      
+      res.json(successResponse(relatedCourses));
+    } catch (error) {
+      console.error('获取相关课程失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
+
+  // 提交课程评价
+  static async submitCourseReview(req, res) {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user.userId;
+      const { rating, reviewContent } = req.body;
+      
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json(errorResponse('评分必须在1-5之间'));
+      }
+      
+      if (!reviewContent || reviewContent.trim() === '') {
+        return res.status(400).json(errorResponse('评价内容不能为空'));
+      }
+      
+      const reviewId = await Course.submitCourseReview(userId, courseId, rating, reviewContent);
+      
+      res.json(successResponse({ reviewId, message: '评价提交成功' }));
+    } catch (error) {
+      console.error('提交课程评价失败:', error);
+      res.status(500).json(errorResponse('服务器内部错误'));
+    }
+  }
 }
 
 module.exports = CourseController;

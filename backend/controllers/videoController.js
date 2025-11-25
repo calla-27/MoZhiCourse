@@ -33,7 +33,7 @@ class VideoController {
   static async getProgress(req, res) {
     try {
       const { videoId } = req.params;
-      const userId = 2; // 模拟用户ID
+      const userId = req.user.userId; // 从认证中间件获取真实用户ID
       
       console.log(`📊 获取视频进度: videoId=${videoId}, userId=${userId}`);
       
@@ -52,7 +52,7 @@ class VideoController {
   static async updateProgress(req, res) {
     try {
       const { videoId, progress, currentTime, duration } = req.body;
-      const userId = 2; // 模拟用户ID
+      const userId = req.user.userId; // 从认证中间件获取真实用户ID
       
       console.log(`🔄 更新学习进度: videoId=${videoId}, progress=${progress}%`);
       
@@ -69,7 +69,7 @@ class VideoController {
   static async recordBehavior(req, res) {
     try {
       const { videoId, courseId, behaviorType, currentTime, playSpeed } = req.body;
-      const userId = 2; // 模拟用户ID
+      const userId = req.user.userId; // 从认证中间件获取真实用户ID
       
       console.log(`📝 记录学习行为: ${behaviorType} at ${currentTime}s`);
       

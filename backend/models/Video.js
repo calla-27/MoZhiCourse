@@ -1,10 +1,10 @@
 // models/Video.js
-const db = require('../config/database');
+const { pool } = require('../config/database');
 
 class Video {
   // 获取视频详情
   static async getById(videoId) {
-    const [videos] = await db.execute(
+    const [videos] = await pool.execute(
       `SELECT 
         cv.video_id,
         cv.video_title,
@@ -30,7 +30,7 @@ class Video {
 
   // 获取学习进度
   static async getProgress(userId, videoId) {
-    const [progress] = await db.execute(
+    const [progress] = await pool.execute(
       `SELECT 
         complete_rate as progress,
         current_position as currentTime
@@ -46,7 +46,7 @@ class Video {
   // 更新学习进度
   static async updateProgress(userId, videoId, progress, currentTime, duration) {
     // 获取课程ID
-    const [courseInfo] = await db.execute(
+    const [courseInfo] = await pool.execute(
       `SELECT cc.course_id 
        FROM t_course_video cv
        LEFT JOIN t_course_chapter cc ON cv.chapter_id = cc.chapter_id
@@ -56,7 +56,7 @@ class Video {
 
     const courseId = courseInfo[0]?.course_id;
 
-    await db.execute(
+    await pool.execute(
       `INSERT INTO t_learning_detail 
        (user_id, course_id, video_id, learn_duration, complete_rate, current_position) 
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -68,7 +68,7 @@ class Video {
   static async recordBehavior(userId, courseId, videoId, behaviorData) {
     const { behaviorType, currentTime, playSpeed = 1.0 } = behaviorData;
     
-    await db.execute(
+    await pool.execute(
       `INSERT INTO t_user_behavior 
        (user_id, course_id, video_id, behavior_type, current_time, play_speed) 
        VALUES (?, ?, ?, ?, ?, ?)`,

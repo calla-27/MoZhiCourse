@@ -312,7 +312,8 @@ export default {
 
 <style scoped>
 .course-video-container {
-  height: 100vh;
+  /* 使用 min-height，避免把页面高度锁死，允许页面自然增长并滚动 */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: var(--light, #f7f7f7);
@@ -323,9 +324,9 @@ export default {
   display: grid;
   /* 章节列表(300px) | 视频/AI区(1fr) | 讨论区(350px) */
   grid-template-columns: 300px 1fr 350px; 
-  height: calc(100vh - 70px);
-  /* 阻止 main-content 滚动，让子容器滚动 */
-  overflow: hidden; 
+  /* 使用 min-height 并允许可见溢出，页面整体可以滚动，子区域仍可独立滚动 */
+  min-height: calc(100vh - 70px);
+  overflow: visible; 
 }
 
 /* 1. 章节列表：确保其可以滚动 */
@@ -339,8 +340,8 @@ export default {
 .video-main-section {
   display: flex;
   flex-direction: column;
-  /* 阻止 video-main-section 自身滚动，让 AIAssistant 内部滚动 */
-  overflow-y: hidden; 
+  /* 允许内部溢出可见；需要滚动的子组件（AI 助手）应设置自身 overflow */
+  overflow-y: visible; 
 }
 
 /* 视频播放器和空状态：限制高度，固定占据空间 */
@@ -375,7 +376,7 @@ export default {
 .ai-assistant-scrollable {
     flex-grow: 1; /* 占据所有剩余空间 */
     min-height: 0; /* 确保在 flex 容器中可以正确滚动 */
-    /* 假设 AIAssistant 内部已经设置了 overflow-y: auto */
+  /* AIAssistant 内部应该设置 overflow-y: auto 来实现滚动 */
     /* 如果 AIAssistant 内部没有滚动，需要在此处添加 overflow-y: auto */
 }
 
@@ -384,7 +385,8 @@ export default {
     display: flex;
     flex-direction: column;
     /* 讨论区容器允许自身滚动 */
-    overflow-y: auto; 
+  overflow-y: auto; 
+  max-height: calc(100vh - 70px);
 }
 
 /* 假设 DiscussionPanel 占据剩余空间并可滚动 */
