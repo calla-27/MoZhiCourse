@@ -32,13 +32,20 @@ const getComments = async (req, res) => {
 };
 
 const postComment = async (req, res) => {
-  const { videoId, userId, content, parentId } = req.body;
+  const { videoId, content, parentId } = req.body;
+  
+  console.log('🔍 JWT token解析结果:', req.user);
+  console.log('📝 请求体数据:', { videoId, content, parentId });
+  
+  const userId = req.user?.userId; // 从JWT token中获取用户ID
+  
+  console.log('👤 用户ID:', userId);
   
   // 验证必要参数
-  if (!videoId || !userId || !content) {
+  if (!videoId || !content || !userId) {
     return res.status(400).json({ 
       success: false, 
-      message: '缺少必要参数: videoId, userId, content' 
+      message: '缺少必要参数: videoId, content, userId' 
     });
   }
   

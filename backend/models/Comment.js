@@ -15,10 +15,9 @@ class CommentModel {
         c.created_time,
         c.updated_time,
         u.user_name,
-        u.occupation,
         LEFT(u.user_name, 1) as avatar
-      FROM t_video_comment c
-      LEFT JOIN t_user u ON c.user_id = u.user_id
+      FROM video_comment c
+      LEFT JOIN user u ON c.user_id = u.user_id
       WHERE c.video_id = ?
       ORDER BY c.created_time DESC
     `;
@@ -32,7 +31,7 @@ class CommentModel {
   async addComment({ videoId, userId, content, parentId }) {
 
     const sql = `
-      INSERT INTO t_video_comment 
+      INSERT INTO video_comment 
         (video_id, user_id, parent_comment_id, comment_content, like_count) 
       VALUES (?, ?, ?, ?, 0)
     `;
@@ -49,10 +48,9 @@ class CommentModel {
       SELECT 
         c.*,
         u.user_name,
-        u.occupation,
         LEFT(u.user_name, 1) as avatar
-      FROM t_video_comment c
-      LEFT JOIN t_user u ON c.user_id = u.user_id
+      FROM video_comment c
+      LEFT JOIN user u ON c.user_id = u.user_id
       WHERE c.comment_id = ?
     `;
     
@@ -65,7 +63,7 @@ class CommentModel {
   async likeComment(commentId) {
 
     const sql = `
-      UPDATE t_video_comment 
+      UPDATE video_comment 
       SET like_count = like_count + 1 
       WHERE comment_id = ?
     `;

@@ -376,8 +376,8 @@ exports.getCourseChapters = async (req, res, next) => {
         ch.chapter_id, ch.chapter_title, ch.order_index as chapter_order,
         v.video_id, v.video_title, v.video_url, v.duration_seconds, 
         v.order_index as video_order
-       FROM t_course_chapter ch
-       LEFT JOIN t_course_video v ON ch.chapter_id = v.chapter_id
+       FROM course_chapter ch
+       LEFT JOIN course_video v ON ch.chapter_id = v.chapter_id
        WHERE ch.course_id = ?
        ORDER BY ch.order_index ASC, v.order_index ASC`,
       [id]

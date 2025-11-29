@@ -10,7 +10,7 @@ class Chapter {
         chapter_title,
         order_index,
         created_time
-       FROM t_course_chapter 
+       FROM course_chapter 
        WHERE course_id = ?
        ORDER BY order_index ASC`,
       [courseId]
@@ -29,7 +29,7 @@ class Chapter {
         duration_seconds,
         order_index,
         created_time
-       FROM t_course_video 
+       FROM course_video 
        WHERE chapter_id = ?
        ORDER BY order_index ASC`,
       [chapterId]

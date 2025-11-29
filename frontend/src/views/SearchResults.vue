@@ -1,31 +1,11 @@
 <template>
   <div class="search-results">
-    <HeaderNav />
-    
-    <!-- 搜索头部 -->
-    <section class="search-header">
-      <div class="container">
-        <div class="search-box">
-          <input 
-            type="text" 
-            class="search-input" 
-            placeholder="搜索课程、技能或知识点..."
-            v-model="searchQuery"
-            @keyup.enter="performSearch"
-          >
-          <button class="search-btn" @click="performSearch">
-            <i class="fas fa-search"></i>
-          </button>
-        </div>
-        
-        <div class="search-meta" v-if="searchQuery">
-          <span class="result-count">找到 {{ searchResults.length }} 个相关结果</span>
-          <span class="search-keyword">关键词: "{{ searchQuery }}"</span>
-        </div>
-      </div>
-    </section>
-
     <div class="container">
+      <div class="search-meta" v-if="searchQuery || hasSearched">
+        <span class="result-count">找到 {{ searchResults.length }} 个相关结果</span>
+        <span v-if="searchQuery" class="search-keyword">关键词: "{{ searchQuery }}"</span>
+      </div>
+
       <!-- 搜索建议（无搜索结果时显示） -->
       <div v-if="!searchQuery && !hasSearched" class="suggestions-section">
         <div class="popular-searches">
@@ -41,10 +21,22 @@
             </span>
           </div>
         </div>
-        
-        <!-- 显示所有课程 -->
+
+        <!-- 中间静态精选卡片区域（你给出的 5 门课程） -->
+        <div class="featured-section">
+          <h2 class="section-title">精选课程</h2>
+          <div class="courses-grid">
+            <CourseCard 
+              v-for="course in featuredCourses" 
+              :key="course.id"
+              :course="course"
+            />
+          </div>
+        </div>
+
+        <!-- 下方全部推荐课程列表（后端数据） -->
         <div v-if="recommendedCourses.length > 0" class="all-courses-section">
-          <h2 class="section-title">推荐课程</h2>
+          <h2 class="section-title">全部推荐课程</h2>
           <div class="courses-grid">
             <CourseCard 
               v-for="course in recommendedCourses" 
@@ -53,7 +45,7 @@
             />
           </div>
         </div>
-        
+
         <!-- 加载状态 -->
         <div v-else-if="isLoading" class="loading-section">
           <div class="loading-spinner"></div>
@@ -120,9 +112,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import HeaderNav from '@/components/layout/HeaderNav.vue'
 import Footer from '@/components/layout/Footer.vue'
 import CourseCard from '@/components/course/CourseCard.vue'
 import { searchCourses, getAllCourses } from '@/api/courseVideo'
@@ -142,7 +133,10 @@ const popularTags = ref([
   'Linux', '系统管理', 'Ubuntu', '人工智能'
 ])
 
-// 推荐课程数据
+// 精选课程数据（从后端动态获取）
+const featuredCourses = ref([])
+
+// 推荐课程数据（从后端加载）
 const recommendedCourses = ref([])
 
 // 计算排序后的结果
@@ -231,7 +225,12 @@ const loadAllCourses = async () => {
   try {
     const res = await getAllCourses()
     const courses = res.data || []
-    recommendedCourses.value = courses.slice(0, 8).map(transformCourseData)
+    
+    // 精选课程取前5个
+    featuredCourses.value = courses.slice(0, 5).map(transformCourseData)
+    
+    // 推荐课程取剩余的课程
+    recommendedCourses.value = courses.slice(5, 13).map(transformCourseData)
   } catch (error) {
     console.error('❌ 加载课程失败:', error)
   } finally {
@@ -248,60 +247,37 @@ onMounted(() => {
     loadAllCourses()
   }
 })
+
+// 监听路由参数中的 q 变化（来自全局导航搜索）
+watch(
+  () => route.query.q,
+  (newQ) => {
+    if (typeof newQ === 'string' && newQ.trim()) {
+      searchQuery.value = newQ.trim()
+      performSearch()
+    } else if (!newQ) {
+      // 清空搜索时，恢复默认课程列表
+      clearSearch()
+    }
+  }
+)
 </script>
 
 <style scoped>
-/* ... */
-
-.search-header {
-  background: linear-gradient(135deg, #1a73e8, #6c8ef5);
-  color: white;
-  padding: 40px 0;
-}
-
-.search-box {
-  max-width: 600px;
-  margin: 0 auto;
-  position: relative;
-}
-
-.search-input {
-  width: 100%;
-  padding: 15px 50px 15px 20px;
-  border: none;
-  border-radius: 30px;
-  font-size: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
-
-.search-btn {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #1a73e8;
-  border: none;
-  color: white;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* 顶部搜索结果信息条 */
 .search-meta {
-  text-align: center;
-  margin-top: 20px;
+  padding-top: 20px;
+  padding-bottom: 10px;
   display: flex;
-  justify-content: center;
-  gap: 30px;
+  justify-content: flex-start;
+  gap: 20px;
   flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: #5f6368;
 }
 
-.result-count, .search-keyword {
-  font-size: 0.9rem;
+.result-count,
+.search-keyword {
   opacity: 0.9;
 }
 

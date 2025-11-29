@@ -168,17 +168,42 @@ class CourseController {
       const { courseId } = req.params;
       const limit = parseInt(req.query.limit) || 4;
       
+      console.log(`🔍 获取相关课程: courseId=${courseId}, limit=${limit}`);
+      
+      // 参数验证
+      if (!courseId || isNaN(courseId)) {
+        return res.status(400).json(errorResponse('课程ID无效'));
+      }
+      
       // 先获取当前课程的分类
       const course = await Course.getById(courseId);
       if (!course) {
+        console.log(`❌ 课程不存在: courseId=${courseId}`);
         return res.status(404).json(notFoundResponse('课程不存在'));
       }
       
+      console.log(`📚 当前课程信息:`, { 
+        courseId, 
+        categoryId: course.category_id, 
+        courseName: course.course_name 
+      });
+      
       const relatedCourses = await Course.getRelatedCourses(courseId, course.category_id, limit);
       
-      res.json(successResponse(relatedCourses));
+      console.log(`✅ 找到 ${relatedCourses.length} 个相关课程`);
+      
+      // 确保返回的数据格式正确
+      const formattedCourses = relatedCourses.map(course => ({
+        ...course,
+        rating: course.rating || 0,
+        student_count: course.student_count || 0,
+        teacher_name: course.teacher_name || '未知讲师'
+      }));
+      
+      res.json(successResponse(formattedCourses));
     } catch (error) {
       console.error('获取相关课程失败:', error);
+      console.error('错误堆栈:', error.stack);
       res.status(500).json(errorResponse('服务器内部错误'));
     }
   }

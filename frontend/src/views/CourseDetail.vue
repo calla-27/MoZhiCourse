@@ -63,17 +63,32 @@
           <h2 class="section-title">课程介绍</h2>
           <div class="course-overview">
             <div class="overview-content">
-              <p>本课程专为编程零基础的学习者设计，通过生动有趣的案例和实践项目，带你轻松入门Python编程世界。</p>
+              <p>{{ courseOverview || course.description || '暂无课程介绍' }}</p>
               
               <h3>学习目标</h3>
-              <ul>
-                <li>掌握Python基础语法和编程概念</li>
-                <li>理解变量、数据类型、运算符的使用</li>
-                <li>学会使用条件语句和循环控制程序流程</li>
-                <li>掌握函数的定义和使用方法</li>
+              <ul v-if="learningObjectives && learningObjectives.length > 0">
+                <li v-for="objective in learningObjectives" :key="objective">{{ objective }}</li>
+              </ul>
+              <ul v-else>
+                <li>掌握课程核心知识点</li>
+                <li>提升实际应用能力</li>
+                <li>培养解决问题的思维</li>
               </ul>
               
-              <div class="features-grid">
+              <div class="features-grid" v-if="courseFeatures && courseFeatures.length > 0">
+                <div 
+                  v-for="feature in courseFeatures" 
+                  :key="feature.title"
+                  class="feature-item"
+                >
+                  <div class="feature-icon">
+                    <i :class="feature.icon || 'fas fa-star'"></i>
+                  </div>
+                  <h4>{{ feature.title }}</h4>
+                  <p>{{ feature.description }}</p>
+                </div>
+              </div>
+              <div class="features-grid" v-else>
                 <div class="feature-item">
                   <div class="feature-icon">
                     <i class="fas fa-laptop-code"></i>
@@ -123,7 +138,8 @@
                 <div 
                   v-for="lesson in chapter.lessons" 
                   :key="lesson.id"
-                  class="lesson"
+                  class="lesson lesson-clickable"
+                  @click="goToVideo(lesson.id)"
                 >
                   <div class="lesson-icon">
                     <i class="fas fa-play-circle"></i>
@@ -298,6 +314,11 @@ const reviews = ref([])
 
 const relatedCourses = ref([])
 
+// 课程扩展信息
+const courseOverview = ref('')
+const learningObjectives = ref([])
+const courseFeatures = ref([])
+
 // 新评价表单
 const newRating = ref(5)
 const newReviewContent = ref('')
@@ -341,6 +362,11 @@ const loadCourseData = async () => {
       intro: c.teacher_intro || '暂无介绍',
       avatar: c.teacher_avatar || ''
     }
+
+    // 解析课程扩展信息
+    courseOverview.value = c.course_overview || ''
+    learningObjectives.value = Array.isArray(c.learning_objectives) ? c.learning_objectives : []
+    courseFeatures.value = Array.isArray(c.course_features) ? c.course_features : []
 
     const rawChapters = (chaptersRes && chaptersRes.data) || chaptersRes || []
     chapters.value = rawChapters.map((ch, index) => {
@@ -421,6 +447,12 @@ const goToFirstVideo = () => {
   if (!firstLesson) return
 
   router.push(`/course/${course.value.id}/video/${firstLesson.id}`)
+}
+
+// 跳转到指定视频
+const goToVideo = (videoId) => {
+  if (!course.value.id || !videoId) return
+  router.push(`/course/${course.value.id}/video/${videoId}`)
 }
 
 const toggleFavorite = async () => {
@@ -727,6 +759,19 @@ watch(
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid #dadce0;
+}
+
+.lesson-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+}
+
+.lesson-clickable:hover {
+  background: #f8f9fa;
+  transform: translateX(4px);
 }
 
 .lesson:last-child {

@@ -252,7 +252,6 @@ export default {
         // 
         await postComment({
           videoId: props.videoId,
-          userId: currentUserId.value,
           content: newMessage.value.trim(),
           // parentId 
         });
@@ -315,7 +314,6 @@ export default {
         await postComment({
           videoId: props.videoId,
           content: replyContent.value.trim(),
-          userId: currentUserId.value,
           parentId: parentCommentId, // 
         });
         replyContent.value = "";

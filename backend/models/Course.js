@@ -2,7 +2,7 @@
 const { pool } = require('../config/database');
 
 class Course {
-  // 获取课程详情（包含讲师完整信息）
+  // 获取课程详情（包含讲师完整信息和课程扩展信息）
   static async getById(courseId) {
     const [courses] = await pool.execute(
       `SELECT 
@@ -18,19 +18,40 @@ class Course {
         c.rating,
         c.rating_count,
         c.category_id,
+        c.learning_objectives,
+        c.course_features,
+        c.course_overview,
         u.user_id as teacher_user_id,
         u.user_name as teacher_name,
-        u.user_intro as teacher_intro,
-        u.occupation as teacher_occupation,
+        ud.user_intro as teacher_intro,
+        ud.occupation as teacher_occupation,
         u.avatar_url as teacher_avatar,
         cc.category_name
-       FROM t_course c
-       LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
-       LEFT JOIN t_course_category cc ON c.category_id = cc.category_id
+       FROM course c
+       LEFT JOIN user u ON c.teacher_user_id = u.user_id
+       LEFT JOIN user_detail ud ON u.user_id = ud.user_id
+       LEFT JOIN course_category cc ON c.category_id = cc.category_id
        WHERE c.course_id = ?`,
       [courseId]
     );
-    return courses[0];
+    
+    const course = courses[0];
+    if (course) {
+      // 解析JSON字段
+      try {
+        course.learning_objectives = course.learning_objectives ? JSON.parse(course.learning_objectives) : [];
+      } catch (e) {
+        course.learning_objectives = [];
+      }
+      
+      try {
+        course.course_features = course.course_features ? JSON.parse(course.course_features) : [];
+      } catch (e) {
+        course.course_features = [];
+      }
+    }
+    
+    return course;
   }
 
   // 获取所有课程
@@ -42,13 +63,13 @@ class Course {
         c.course_desc, 
         c.cover_img,
         c.difficulty_level,
+        c.rating,
+        c.student_count,
         c.created_time,
-        u.user_name as teacher_name,
-        COUNT(DISTINCT ld.user_id) as student_count
-       FROM t_course c
-       LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
-       LEFT JOIN t_learning_detail ld ON c.course_id = ld.course_id
-       GROUP BY c.course_id
+        u.user_name as teacher_name
+       FROM course c
+       LEFT JOIN user u ON c.teacher_user_id = u.user_id
+       WHERE c.is_online = 1
        ORDER BY c.created_time DESC`
     );
     return courses;
@@ -63,14 +84,13 @@ class Course {
         c.course_desc, 
         c.cover_img,
         c.difficulty_level,
+        c.rating,
+        c.student_count,
         c.created_time,
-        u.user_name as teacher_name,
-        COUNT(DISTINCT ld.user_id) as student_count
-       FROM t_course c
-       LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
-       LEFT JOIN t_learning_detail ld ON c.course_id = ld.course_id
-       WHERE c.course_name LIKE ? OR c.course_desc LIKE ?
-       GROUP BY c.course_id
+        u.user_name as teacher_name
+       FROM course c
+       LEFT JOIN user u ON c.teacher_user_id = u.user_id
+       WHERE (c.course_name LIKE ? OR c.course_desc LIKE ?) AND c.is_online = 1
        ORDER BY c.created_time DESC`,
       [`%${keyword}%`, `%${keyword}%`]
     );
@@ -80,16 +100,16 @@ class Course {
   static async getStats(courseId) {
     const [[participantRow]] = await pool.execute(
       `SELECT COUNT(DISTINCT user_id) AS participatingUsers
-       FROM t_learning_detail
+       FROM learning_detail
        WHERE course_id = ?`,
       [courseId]
     );
 
     const [[commentRow]] = await pool.execute(
       `SELECT COUNT(*) AS totalComments
-       FROM t_video_comment vc
-       LEFT JOIN t_course_video cv ON vc.video_id = cv.video_id
-       LEFT JOIN t_course_chapter cc ON cv.chapter_id = cc.chapter_id
+       FROM video_comment vc
+       LEFT JOIN course_video cv ON vc.video_id = cv.video_id
+       LEFT JOIN course_chapter cc ON cv.chapter_id = cc.chapter_id
        WHERE cc.course_id = ?`,
       [courseId]
     );
@@ -107,7 +127,7 @@ class Course {
   static async getFavoriteStatus(userId, courseId) {
     const [rows] = await pool.execute(
       `SELECT is_favorite
-       FROM t_user_course
+       FROM user_course
        WHERE user_id = ? AND course_id = ?`,
       [userId, courseId]
     );
@@ -120,7 +140,7 @@ class Course {
   static async setFavoriteStatus(userId, courseId, isFavorite) {
     // 先尝试更新，如果没有记录再插入
     const [result] = await pool.execute(
-      `UPDATE t_user_course
+      `UPDATE user_course
        SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP
        WHERE user_id = ? AND course_id = ?`,
       [isFavorite ? 1 : 0, userId, courseId]
@@ -128,7 +148,7 @@ class Course {
 
     if (result.affectedRows === 0) {
       await pool.execute(
-        `INSERT INTO t_user_course (user_id, course_id, is_favorite, enroll_time, created_at, updated_at)
+        `INSERT INTO user_course (user_id, course_id, is_favorite, enroll_time, created_at, updated_at)
          VALUES (?, ?, ?, NOW(), NOW(), NOW())`,
         [userId, courseId, isFavorite ? 1 : 0]
       );
@@ -149,10 +169,9 @@ class Course {
           cr.created_time,
           u.user_id,
           u.user_name,
-          u.occupation,
           u.avatar_url
-         FROM t_course_review cr
-         INNER JOIN t_user u ON cr.user_id = u.user_id
+         FROM course_review cr
+         INNER JOIN user u ON cr.user_id = u.user_id
          WHERE cr.course_id = ?
          ORDER BY cr.created_time DESC
          LIMIT ?`,
@@ -174,12 +193,11 @@ class Course {
         vc.created_time,
         u.user_id,
         u.user_name,
-        u.occupation,
         u.avatar_url
-       FROM t_video_comment vc
-       INNER JOIN t_course_video cv ON vc.video_id = cv.video_id
-       INNER JOIN t_course_chapter cc ON cv.chapter_id = cc.chapter_id
-       INNER JOIN t_user u ON vc.user_id = u.user_id
+       FROM video_comment vc
+       INNER JOIN course_video cv ON vc.video_id = cv.video_id
+       INNER JOIN course_chapter cc ON cv.chapter_id = cc.chapter_id
+       INNER JOIN user u ON vc.user_id = u.user_id
        WHERE cc.course_id = ?
        ORDER BY vc.created_time DESC
        LIMIT ?`,
@@ -191,33 +209,96 @@ class Course {
   // 提交课程评价
   static async submitCourseReview(userId, courseId, rating, reviewContent) {
     const [result] = await pool.execute(
-      `INSERT INTO t_course_review (user_id, course_id, rating, review_content, created_time)
+      `INSERT INTO course_review (user_id, course_id, rating, review_content, created_at)
        VALUES (?, ?, ?, ?, NOW())`,
       [userId, courseId, rating, reviewContent]
     );
     return result.insertId;
   }
 
-  // 获取相关课程推荐（同分类的其他课程）
+  // 获取相关课程推荐（智能推荐逻辑）
   static async getRelatedCourses(courseId, categoryId, limit = 4) {
-    const [courses] = await pool.execute(
-      `SELECT 
-        c.course_id,
-        c.course_name,
-        c.course_desc,
-        c.cover_img,
-        c.difficulty_level,
-        c.rating,
-        u.user_name as teacher_name,
-        c.student_count
-       FROM t_course c
-       LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
-       WHERE c.category_id = ? AND c.course_id != ? AND c.is_online = 1
-       ORDER BY c.rating DESC, c.student_count DESC
-       LIMIT ?`,
-      [categoryId, courseId, limit]
-    );
-    return courses;
+    let courses = [];
+    
+    // 1. 优先推荐同分类的其他课程
+    if (categoryId) {
+      const [sameCategoryCourses] = await pool.execute(
+        `SELECT 
+          c.course_id,
+          c.course_name,
+          c.course_desc,
+          c.cover_img,
+          c.difficulty_level,
+          c.rating,
+          u.user_name as teacher_name,
+          c.student_count
+         FROM course c
+         LEFT JOIN user u ON c.teacher_user_id = u.user_id
+         WHERE c.category_id = ? AND c.course_id != ? AND c.is_online = 1
+         ORDER BY c.rating DESC, c.student_count DESC
+         LIMIT ?`,
+        [categoryId, courseId, limit]
+      );
+      courses = sameCategoryCourses;
+    }
+    
+    // 2. 如果同分类课程不够，补充热门课程
+    if (courses.length < limit) {
+      const remainingLimit = limit - courses.length;
+      const existingIds = courses.map(c => c.course_id);
+      const excludeIds = [courseId, ...existingIds];
+      
+      const placeholders = excludeIds.map(() => '?').join(',');
+      const [popularCourses] = await pool.execute(
+        `SELECT 
+          c.course_id,
+          c.course_name,
+          c.course_desc,
+          c.cover_img,
+          c.difficulty_level,
+          c.rating,
+          u.user_name as teacher_name,
+          c.student_count
+         FROM course c
+         LEFT JOIN user u ON c.teacher_user_id = u.user_id
+         WHERE c.course_id NOT IN (${placeholders}) AND c.is_online = 1
+         ORDER BY c.rating DESC, c.student_count DESC
+         LIMIT ?`,
+        [...excludeIds, remainingLimit]
+      );
+      
+      courses = [...courses, ...popularCourses];
+    }
+    
+    // 3. 如果还是不够，获取最新课程
+    if (courses.length < limit) {
+      const remainingLimit = limit - courses.length;
+      const existingIds = courses.map(c => c.course_id);
+      const excludeIds = [courseId, ...existingIds];
+      
+      const placeholders = excludeIds.map(() => '?').join(',');
+      const [latestCourses] = await pool.execute(
+        `SELECT 
+          c.course_id,
+          c.course_name,
+          c.course_desc,
+          c.cover_img,
+          c.difficulty_level,
+          c.rating,
+          u.user_name as teacher_name,
+          c.student_count
+         FROM course c
+         LEFT JOIN user u ON c.teacher_user_id = u.user_id
+         WHERE c.course_id NOT IN (${placeholders}) AND c.is_online = 1
+         ORDER BY c.created_time DESC
+         LIMIT ?`,
+        [...excludeIds, remainingLimit]
+      );
+      
+      courses = [...courses, ...latestCourses];
+    }
+    
+    return courses.slice(0, limit);
   }
 }
 

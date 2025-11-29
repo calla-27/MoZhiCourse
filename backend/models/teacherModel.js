@@ -12,8 +12,8 @@ const getTopTeachers = async (limit) => {
        ROUND(AVG(c.rating), 1) AS avg_rating,
        SUM(c.student_count) AS total_students,
        SUM(c.rating_count) AS total_reviews
-     FROM t_user u
-     INNER JOIN t_course c ON u.user_id = c.teacher_user_id
+     FROM user u
+     INNER JOIN course c ON u.user_id = c.teacher_user_id
      WHERE u.role = 'instructor' AND c.is_online = 1
      GROUP BY u.user_id
      HAVING avg_rating >= 4.0
