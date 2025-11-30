@@ -10,9 +10,9 @@ const getCourseById = async (id) => {
        u.user_intro AS teacher_intro,
        u.avatar_url AS teacher_avatar,
        u.occupation AS teacher_occupation
-     FROM t_course c
-     LEFT JOIN t_course_category cat ON c.category_id = cat.category_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM course c
+     LEFT JOIN course_category cat ON c.category_id = cat.category_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE c.course_id = ? AND c.is_online = 1`,
     [id]
   );
@@ -22,7 +22,7 @@ const getCourseById = async (id) => {
 
 const getCourseAvailability = async (courseId) => {
   const [rows] = await pool.query(
-    'SELECT course_id, is_online FROM t_course WHERE course_id = ?',
+    'SELECT course_id, is_online FROM course WHERE course_id = ?',
     [courseId]
   );
 
@@ -38,9 +38,9 @@ const getCourseList = async ({ whereClause, params, limit, offset, orderBy }) =>
        cat.category_name,
        u.user_name AS teacher_name,
        u.avatar_url AS teacher_avatar
-     FROM t_course c
-     LEFT JOIN t_course_category cat ON c.category_id = cat.category_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM course c
+     LEFT JOIN course_category cat ON c.category_id = cat.category_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE ${whereClause}
      ORDER BY ${orderBy}
      LIMIT ? OFFSET ?`,
@@ -52,7 +52,7 @@ const getCourseList = async ({ whereClause, params, limit, offset, orderBy }) =>
 
 const getCourseCategoryId = async (courseId) => {
   const [rows] = await pool.query(
-    'SELECT category_id FROM t_course WHERE course_id = ?',
+    'SELECT category_id FROM course WHERE course_id = ?',
     [courseId]
   );
 
@@ -61,7 +61,7 @@ const getCourseCategoryId = async (courseId) => {
 
 const countCourses = async (whereClause, params) => {
   const [countResult] = await pool.query(
-    `SELECT COUNT(*) AS total FROM t_course c WHERE ${whereClause}`,
+    `SELECT COUNT(*) AS total FROM course c WHERE ${whereClause}`,
     params
   );
 
@@ -79,8 +79,8 @@ const getCourseChaptersWithVideos = async (courseId) => {
        v.video_url,
        v.duration_seconds,
        v.order_index AS video_order
-     FROM t_course_chapter ch
-     LEFT JOIN t_course_video v ON ch.chapter_id = v.chapter_id
+     FROM course_chapter ch
+     LEFT JOIN course_video v ON ch.chapter_id = v.chapter_id
      WHERE ch.course_id = ?
      ORDER BY ch.order_index ASC, v.order_index ASC`,
     [courseId]
@@ -94,7 +94,7 @@ const getTeacherStats = async (teacherId) => {
     `SELECT 
        COUNT(DISTINCT c.course_id) AS course_count,
        COALESCE(SUM(c.student_count), 0) AS total_students
-     FROM t_course c
+     FROM course c
      WHERE c.teacher_user_id = ? AND c.is_online = 1`,
     [teacherId]
   );
@@ -109,9 +109,9 @@ const getRecommendedCourses = async (limit) => {
        c.difficulty_level, c.student_count, c.rating, c.rating_count,
        cat.category_name,
        u.user_name AS teacher_name
-     FROM t_course c
-     LEFT JOIN t_course_category cat ON c.category_id = cat.category_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM course c
+     LEFT JOIN course_category cat ON c.category_id = cat.category_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE c.is_online = 1
      ORDER BY c.rating DESC, c.student_count DESC
      LIMIT ?`,
@@ -128,9 +128,9 @@ const getPopularCourses = async (limit) => {
        c.difficulty_level, c.student_count, c.rating, c.rating_count,
        cat.category_name,
        u.user_name AS teacher_name
-     FROM t_course c
-     LEFT JOIN t_course_category cat ON c.category_id = cat.category_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM course c
+     LEFT JOIN course_category cat ON c.category_id = cat.category_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE c.is_online = 1
      ORDER BY c.rating DESC, c.rating_count DESC
      LIMIT ?`,
@@ -147,9 +147,9 @@ const getNewestCourses = async (limit) => {
        c.difficulty_level, c.student_count, c.rating, c.rating_count,
        cat.category_name,
        u.user_name AS teacher_name
-     FROM t_course c
-     LEFT JOIN t_course_category cat ON c.category_id = cat.category_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM course c
+     LEFT JOIN course_category cat ON c.category_id = cat.category_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE c.is_online = 1
      ORDER BY c.created_at DESC
      LIMIT ?`,
@@ -166,9 +166,9 @@ const getRelatedCourses = async (categoryId, courseId, limit) => {
        c.difficulty_level, c.student_count, c.rating, c.rating_count,
        cat.category_name,
        u.user_name AS teacher_name
-     FROM t_course c
-     LEFT JOIN t_course_category cat ON c.category_id = cat.category_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM course c
+     LEFT JOIN course_category cat ON c.category_id = cat.category_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE c.category_id = ? AND c.course_id != ? AND c.is_online = 1
      ORDER BY c.rating DESC, c.student_count DESC
      LIMIT ?`,
@@ -180,14 +180,14 @@ const getRelatedCourses = async (categoryId, courseId, limit) => {
 
 const incrementEnrollment = async (courseId) => {
   await pool.query(
-    'UPDATE t_course SET student_count = student_count + 1 WHERE course_id = ?',
+    'UPDATE course SET student_count = student_count + 1 WHERE course_id = ?',
     [courseId]
   );
 };
 
 const updateCourseRating = async (courseId, rating, ratingCount) => {
   await pool.query(
-    'UPDATE t_course SET rating = ?, rating_count = ? WHERE course_id = ?',
+    'UPDATE course SET rating = ?, rating_count = ? WHERE course_id = ?',
     [rating, ratingCount, courseId]
   );
 };

@@ -57,7 +57,7 @@
           <input
             v-model="registerForm.user_name"
             type="text"
-            placeholder="请输入你的名字"
+            placeholder="请输入用户名"
             required
           />
         </div>
@@ -67,7 +67,7 @@
           <input
             v-model="registerForm.password"
             type="password"
-            placeholder="请输入登录密码"
+            placeholder="请输入密码"
             required
           />
         </div>
@@ -136,7 +136,9 @@ const handleLogin = async () => {
 
     console.log('登录成功，收到的 token:', token)
 
-    const redirect = route.query.redirect || '/search'
+    // 登录成功后：如果有 redirect 参数优先跳转，没有则回到首页
+    const redirect = route.query.redirect || '/'
+    console.log('准备跳转到:', redirect)
     router.push(redirect)
   } catch (e) {
     error.value = e.response?.data?.message || '登录失败，请检查账号密码'
@@ -160,9 +162,11 @@ const handleRegister = async () => {
     localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(user))
 
-     console.log('注册成功，收到的 token:', token)
+    console.log('注册成功，收到的 token:', token)
 
-    const redirect = route.query.redirect || '/search'
+    // 注册成功后：如果有 redirect 参数优先跳转，没有则回到首页
+    const redirect = route.query.redirect || '/'
+    console.log('注册后准备跳转到:', redirect)
     router.push(redirect)
   } catch (e) {
     error.value = e.response?.data?.message || '注册失败，请稍后重试'

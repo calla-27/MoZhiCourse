@@ -1,126 +1,199 @@
-const { pool } = require('../config/database');
+﻿const { execute } = require('../config/database');
 
-// 用户相关数据操作
-const getUserByUserName = async (userName) => {
-  const [rows] = await pool.query(
-    `SELECT user_id, user_name, email, password_hash, role, occupation,
-            learning_goal, user_intro, avatar_url, is_active, register_time, last_login_time
-     FROM t_user
-     WHERE user_name = ?`,
-    [userName]
-  );
-  return rows;
-};
-
-// 按账号查询用户（现在只按 user_name）
-const getUserByAccount = async (account) => {
-  const [rows] = await pool.query(
-    `SELECT user_id, user_name, email, password_hash, role, occupation,
-            learning_goal, user_intro, avatar_url, is_active, register_time, last_login_time
-     FROM t_user
-     WHERE user_name = ?`,
-    [account]
-  );
-  return rows;
-};
-
-const getUserByEmail = async (email) => {
-  const [rows] = await pool.query(
-    'SELECT user_id FROM t_user WHERE email = ?',
-    [email]
-  );
-  return rows;
-};
-
-const createUser = async ({
-  user_name,
-  email,
-  password_hash,
-  occupation,
-  learning_goal,
-  role,
-}) => {
-  const [result] = await pool.query(
-    `INSERT INTO t_user (user_name, email, password_hash, occupation, learning_goal, role, register_time)
-     VALUES (?, ?, ?, ?, ?, COALESCE(?, 'learner'), NOW())`,
-    [
-      user_name,
-      email || null,
-      password_hash,
-      occupation || null,
-      learning_goal || null,
-      role || null,
-    ]
-  );
-  return result.insertId;
-};
-
-const getUserById = async (userId) => {
-  const [rows] = await pool.query(
-    `SELECT user_id, user_name, email, occupation, learning_goal,
-            role, user_intro, avatar_url, register_time, last_login_time
-     FROM t_user
-     WHERE user_id = ?`,
-    [userId]
-  );
-  return rows;
-};
-
-const updateLastLoginTime = async (userId) => {
-  await pool.query(
-    'UPDATE t_user SET last_login_time = NOW() WHERE user_id = ?',
-    [userId]
-  );
-};
-
-const getUserPasswordHash = async (userId) => {
-  const [rows] = await pool.query(
-    'SELECT password_hash FROM t_user WHERE user_id = ?',
-    [userId]
-  );
-  return rows;
-};
-
-const updateUserPassword = async (userId, passwordHash) => {
-  await pool.query(
-    'UPDATE t_user SET password_hash = ? WHERE user_id = ?',
-    [passwordHash, userId]
-  );
-};
-
-const updateUserProfile = async (userId, updates) => {
-  const columns = [];
-  const values = [];
-
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value !== undefined) {
-      columns.push(`${key} = ?`);
-      values.push(value);
-    }
-  });
-
-  if (columns.length === 0) {
-    return false;
+class UserModel {
+  // 根据用户ID查找用户
+  static async findById(userId) {
+    const [rows] = await execute(
+      `SELECT 
+        u.user_id, 
+        u.user_name, 
+        u.email, 
+        u.avatar_url, 
+        u.role, 
+        u.register_time,
+        u.last_login_time
+      FROM user u
+      WHERE u.user_id = ?`,
+      [userId]
+    );
+    return rows[0];
   }
 
-  values.push(userId);
+  // 根据邮箱查找用户
+  static async findByEmail(email) {
+    const [rows] = await execute(
+      `SELECT 
+        u.user_id, 
+        u.user_name, 
+        u.email, 
+        u.password_hash, 
+        u.avatar_url, 
+        u.role, 
+        u.register_time,
+        u.last_login_time
+      FROM user u
+      WHERE u.email = ?`,
+      [email]
+    );
+    return rows[0];
+  }
 
-  await pool.query(
-    `UPDATE t_user SET ${columns.join(', ')} WHERE user_id = ?`,
-    values
-  );
+  // 更新用户信息
+  static async updateProfile(userId, data) {
+    const fields = [];
+    const values = [];
 
-  return true;
-};
+    if (data.user_name) {
+      fields.push('user_name = ?');
+      values.push(data.user_name);
+    }
+    if (data.email) {
+      fields.push('email = ?');
+      values.push(data.email);
+    }
+    if (data.user_intro !== undefined) {
+      fields.push('user_intro = ?');
+      values.push(data.user_intro);
+    }
+    if (data.avatar_url) {
+      fields.push('avatar_url = ?');
+      values.push(data.avatar_url);
+    }
 
-module.exports = {
-  getUserByUserName,
-  getUserByAccount,
-  getUserByEmail,
-  createUser,
-  getUserById,
-  updateLastLoginTime,
-  getUserPasswordHash,
-  updateUserPassword,
-  updateUserProfile
-};
+    if (fields.length === 0) {
+      throw new Error('没有需要更新的字段');
+    }
+
+    values.push(userId);
+
+    const [result] = await execute(
+      `UPDATE user SET ${fields.join(', ')} WHERE user_id = ?`,
+      values
+    );
+
+    return result.affectedRows > 0;
+  }
+
+  // 更新头像
+  static async updateAvatar(userId, avatarUrl) {
+    const [result] = await execute(
+      'UPDATE user SET avatar_url = ? WHERE user_id = ?',
+      [avatarUrl, userId]
+    );
+    return result.affectedRows > 0;
+  }
+
+  // 更新密码
+  static async updatePassword(userId, passwordHash) {
+    const [result] = await execute(
+      'UPDATE user SET password_hash = ? WHERE user_id = ?',
+      [passwordHash, userId]
+    );
+    return result.affectedRows > 0;
+  }
+
+  // 更新最后登录时间
+  static async updateLastLoginTime(userId) {
+    const [result] = await execute(
+      'UPDATE user SET last_login_time = NOW() WHERE user_id = ?',
+      [userId]
+    );
+    return result.affectedRows > 0;
+  }
+
+  // 检查用户名是否存在
+  static async checkUserNameExists(userName, excludeUserId = null) {
+    let query = 'SELECT user_id FROM user WHERE user_name = ?';
+    let params = [userName];
+
+    if (excludeUserId) {
+      query += ' AND user_id != ?';
+      params.push(excludeUserId);
+    }
+
+    const [rows] = await execute(query, params);
+    return rows.length > 0;
+  }
+
+  // 检查邮箱是否存在
+  static async checkEmailExists(email, excludeUserId = null) {
+    let query = 'SELECT user_id FROM user WHERE email = ?';
+    let params = [email];
+
+    if (excludeUserId) {
+      query += ' AND user_id != ?';
+      params.push(excludeUserId);
+    }
+
+    const [rows] = await execute(query, params);
+    return rows.length > 0;
+  }
+
+  // 根据用户名查找用户
+  static async findByUserName(userName) {
+    const [rows] = await execute(
+      `SELECT 
+        u.user_id, 
+        u.user_name, 
+        u.email, 
+        u.password_hash, 
+        u.avatar_url, 
+        u.role, 
+        u.register_time,
+        u.last_login_time
+      FROM user u
+      WHERE u.user_name = ?`,
+      [userName]
+    );
+    return rows[0];
+  }
+
+  // 根据账号查找用户（用户名或邮箱）
+  static async findByAccount(account) {
+    const [rows] = await execute(
+      `SELECT 
+        u.user_id, 
+        u.user_name, 
+        u.email, 
+        u.password_hash, 
+        u.avatar_url, 
+        u.role, 
+        u.is_active,
+        u.register_time,
+        u.last_login_time
+      FROM user u
+      WHERE u.user_name = ? OR u.email = ?`,
+      [account, account]
+    );
+    return rows[0];
+  }
+
+  // 创建新用户
+  static async create(userData) {
+    const { user_name, password_hash, email, role = 'learner' } = userData;
+    
+    const [result] = await execute(
+      `INSERT INTO user (user_name, password_hash, email, role, register_time) 
+       VALUES (?, ?, ?, ?, NOW())`,
+      [user_name, password_hash, email, role]
+    );
+    
+    return {
+      user_id: result.insertId,
+      user_name,
+      email,
+      role
+    };
+  }
+
+  // 获取用户密码哈希
+  static async getPasswordHash(userId) {
+    const [rows] = await execute(
+      'SELECT password_hash FROM user WHERE user_id = ?',
+      [userId]
+    );
+    return rows[0]?.password_hash;
+  }
+}
+
+module.exports = UserModel;

@@ -1,12 +1,36 @@
 <template>
   <div id="app">
+    <!-- 全局导航栏，只在需要的页面显示 -->
+    <HeaderNav v-if="shouldShowNav" />
     <router-view />
   </div>
 </template>
 
 <script>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import HeaderNav from '@/components/layout/HeaderNav.vue'
+
 export default {
-  name: 'App'
+  name: 'App',
+  components: {
+    HeaderNav
+  },
+  setup() {
+    const route = useRoute()
+    
+    // 定义不需要显示导航栏的页面
+    const noNavPages = ['/login', '/register']
+    
+    // 计算是否应该显示导航栏
+    const shouldShowNav = computed(() => {
+      return !noNavPages.includes(route.path)
+    })
+    
+    return {
+      shouldShowNav
+    }
+  }
 }
 </script>
 
@@ -41,5 +65,14 @@ body {
 
 #app {
   min-height: 100vh;
+}
+
+/* 确保页面内容不被导航栏遮挡 */
+.search-results,
+.community,
+.course-detail,
+.course-video,
+.personal-center {
+  padding-top: 20px;
 }
 </style>

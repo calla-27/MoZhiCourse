@@ -1,6 +1,6 @@
 <template>
   <div class="course-card" @click="handleCardClick">
-    <div class="course-image" :style="{ background: course.image }">
+    <div class="course-image" :style="coverStyle">
       <span class="course-difficulty">{{ course.difficulty }}</span>
     </div>
     <div class="course-content">
@@ -18,6 +18,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -28,6 +29,28 @@ const props = defineProps({
 })
 
 const router = useRouter()
+
+// 封面样式：优先使用后端返回的 cover_img，其次回退到原有的 course.image
+const coverStyle = computed(() => {
+  const c = props.course || {}
+
+  if (c.cover_img) {
+    return {
+      backgroundImage: `url(${c.cover_img})`
+    }
+  }
+
+  if (c.image) {
+    // 兼容之前使用的渐变/纯色背景
+    return {
+      background: c.image
+    }
+  }
+
+  return {
+    backgroundColor: '#f5f5f5'
+  }
+})
 
 const handleCardClick = () => {
   router.push(`/course/${props.course.id}`)
@@ -53,6 +76,9 @@ const handleCardClick = () => {
   width: 100%;
   height: 180px;
   position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .course-difficulty {

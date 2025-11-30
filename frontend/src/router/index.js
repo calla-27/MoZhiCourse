@@ -3,7 +3,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 import CourseVideo from '../views/CourseVideo.vue'
 import CourseDetail from '../views/CourseDetail.vue'
 import Login from '../views/Login.vue'
-import SearchResults from '../views/SearchResults.vue'
+import Register from '../views/Register.vue'
+import Home from '@/views/Home.vue' 
+import Community from '../views/Community.vue'
+import StudentCenter from '../views/StudentCenter.vue'
+import TeacherCenter from '../views/TeacherCenter.vue'
+import PersonalCenterRouter from '../views/PersonalCenterRouter.vue'
 
 const routes = [
   {
@@ -14,12 +19,12 @@ const routes = [
   {
     path: '/register',
     name: 'Register',
-    component: Login
+    component: Register
   },
   {
-    path: '/search',
-    name: 'SearchResults',
-    component: SearchResults
+    path: '/',
+    name: 'Home',
+    component: Home
   },
   {
     path: '/course/:courseId',
@@ -32,8 +37,24 @@ const routes = [
     component: CourseVideo
   },
   {
-    path: '/',
-    redirect: '/search'
+    path: '/community',
+    name: 'Community',
+    component: Community
+  },
+  {
+    path: '/personal',
+    name: 'PersonalCenterRouter',
+    component: PersonalCenterRouter
+  },
+  {
+    path: '/personal/student',
+    name: 'StudentCenter',
+    component: StudentCenter
+  },
+  {
+    path: '/personal/teacher',
+    name: 'TeacherCenter',
+    component: TeacherCenter
   }
 ]
 
@@ -47,16 +68,20 @@ router.beforeEach((to, from, next) => {
   const isPublic = publicPaths.includes(to.path)
   const token = localStorage.getItem('token')
 
-  const protectedPaths = ['/course', '/search']
-  const needsAuth = protectedPaths.some(path => to.path.startsWith(path))
-  
-  if (!isPublic && needsAuth && !token) {
+  // 如果是公开页面，直接放行
+  if (isPublic) {
+    return next()
+  }
+
+  // 如果需要认证但没有 token，跳转到登录页
+  if (!token) {
     return next({
       path: '/login',
       query: { redirect: to.fullPath },
     })
   }
 
+  // 已登录，放行
   next()
 })
 

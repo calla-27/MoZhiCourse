@@ -1,15 +1,5 @@
 <template>
   <div class="discussion-sidebar">
-    <div class="discussion-header">
-      <div class="discussion-avatar">
-        <i class="fas fa-comments"></i>
-      </div>
-      <div>
-        <h3 style="font-size: 1.1rem">实时讨论区</h3>
-        <p style="font-size: 0.75rem; color: var(--gray)">与同学交流学习心得</p>
-      </div>
-    </div>
-
     <div class="discussion-stats">
       <div class="discussion-stat-item">
         <i class="fas fa-signal"></i>
@@ -47,113 +37,120 @@
       </div>
     </div>
 
-    <div class="discussion-content" ref="discussionContent">
-      <div
-        v-for="discussion in filteredDiscussions"
-        :key="discussion.comment_id"
-        class="message"
-        :class="{ 'current-user': discussion.user_id === currentUserId }"
-      >
-        <div class="message-header">
-          <div class="message-avatar">{{ discussion.avatar }}</div>
-          <div class="message-user">{{ discussion.user_name }}</div>
-          <div class="message-time">
-            {{ formatTime(discussion.create_time) }}
-          </div>
-        </div>
-        <div class="message-text">{{ discussion.comment_content }}</div>
-        <div class="message-actions">
-          <span
-            class="message-action"
-            :class="{ liked: discussion.liked }"
-            @click="handleLike(discussion.comment_id)"
-          >
-            👍 {{ discussion.like_count }}
-          </span>
-          <span class="message-action" @click="handleReply(discussion)">
-            💬 回复
-          </span>
-        </div>
-
-        <!-- 回复列表 -->
+    <!-- 可滚动的讨论内容区域 -->
+    <div class="discussion-content-wrapper">
+      <div class="discussion-content" ref="discussionContent">
         <div
-          v-if="discussion.replies && discussion.replies.length > 0"
-          class="replies"
+          v-for="discussion in filteredDiscussions"
+          :key="discussion.comment_id"
+          class="message"
+          :class="{ 'current-user': discussion.user_id === currentUserId }"
         >
+          <div class="message-header">
+            <div class="message-avatar">{{ getAvatarText(discussion.user_name) }}</div>
+            <div class="message-user">{{ discussion.user_name }}</div>
+            <div class="message-time">
+              {{ formatTime(discussion.create_time) }}
+            </div>
+          </div>
+          <div class="message-text">{{ discussion.comment_content }}</div>
+          <div class="message-actions">
+            <span
+              class="message-action"
+              :class="{ liked: discussion.liked }"
+              @click="handleLike(discussion.comment_id)"
+            >
+              👍 {{ discussion.like_count || 0 }}
+            </span>
+            <span class="message-action" @click="handleReply(discussion)">
+              💬 回复
+            </span>
+          </div>
+
+          <!-- 回复列表 -->
           <div
-            v-for="reply in discussion.replies"
-            :key="reply.reply_id"
-            class="reply"
-            :class="{ 'current-user': reply.user_id === currentUserId }"
+            v-if="discussion.replies && discussion.replies.length > 0"
+            class="replies"
           >
-            <div class="message-header">
-              <div class="message-avatar">{{ reply.avatar }}</div>
-              <div class="message-user">{{ reply.user_name }}</div>
-              <div class="message-time">
-                {{ formatTime(reply.create_time) }}
+            <div
+              v-for="reply in discussion.replies"
+              :key="reply.reply_id"
+              class="reply"
+              :class="{ 'current-user': reply.user_id === currentUserId }"
+            >
+              <div class="message-header">
+                <div class="message-avatar">{{ getAvatarText(reply.user_name) }}</div>
+                <div class="message-user">{{ reply.user_name }}</div>
+                <div class="message-time">
+                  {{ formatTime(reply.create_time) }}
+                </div>
+              </div>
+              <div class="message-text">{{ reply.comment_content }}</div>
+              <div class="message-actions">
+                <span
+                  class="message-action"
+                  :class="{ liked: reply.liked }"
+                  @click="handleLike(reply.comment_id)"
+                >
+                  👍 {{ reply.like_count || 0 }}
+                </span>
               </div>
             </div>
-            <div class="message-text">{{ reply.comment_content }}</div>
-            <div class="message-actions">
-              <span
-                class="message-action"
-                :class="{ liked: reply.liked }"
-                @click="handleLike(reply.comment_id)"
+          </div>
+
+          <!-- 回复输入框 -->
+          <div v-if="replyingTo === discussion.comment_id" class="reply-input">
+            <textarea
+              v-model="replyContent"
+              class="reply-textarea"
+              placeholder="输入回复内容..."
+              rows="2"
+            ></textarea>
+            <div class="reply-actions">
+              <button
+                class="btn btn-primary btn-sm"
+                @click="submitReply(discussion.comment_id)"
+                :disabled="!replyContent.trim()"
               >
-                👍 {{ reply.like_count }}
-              </span>
+                发送
+              </button>
+              <button class="btn btn-secondary btn-sm" @click="cancelReply">
+                取消
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- 回复输入框 -->
-        <div v-if="replyingTo === discussion.comment_id" class="reply-input">
-          <textarea
-            v-model="replyContent"
-            class="reply-textarea"
-            placeholder="输入回复内容..."
-            rows="2"
-          ></textarea>
-          <div class="reply-actions">
-            <button
-              class="btn btn-primary btn-sm"
-              @click="submitReply(discussion.comment_id)"
-            >
-              发送
-            </button>
-            <button class="btn btn-secondary btn-sm" @click="cancelReply">
-              取消
-            </button>
-          </div>
+        <div v-if="filteredDiscussions.length === 0" class="no-discussions">
+          <i class="fas fa-comment-slash"></i>
+          <p>暂无讨论内容</p>
         </div>
-      </div>
-
-      <div v-if="filteredDiscussions.length === 0" class="no-discussions">
-        <i class="fas fa-comment-slash"></i>
-        <p>暂无讨论内容</p>
       </div>
     </div>
 
-    <div class="discussion-input-area">
-      <input
-        v-model="newMessage"
-        type="text"
-        class="discussion-input"
-        placeholder="输入消息..."
-        @keypress.enter="handleSendMessage"
-      />
-      <div style="display: flex; gap: 8px">
-        <button
-          class="btn btn-primary"
-          @click="handleSendMessage"
-          :disabled="!newMessage.trim()"
-        >
-          <i class="fas fa-paper-plane"></i>
-          发送
-        </button>
-        <button class="btn btn-secondary" type="button" title="常用表情">
-          <i class="fas fa-smile"></i>
-        </button>
+    <!-- 固定的发送区域 -->
+    <div class="discussion-input-fixed">
+      <div class="discussion-input-area">
+        <input
+          v-model="newMessage"
+          type="text"
+          class="discussion-input"
+          placeholder="输入消息..."
+          @keypress.enter="handleSendMessage"
+        />
+        <div class="input-actions">
+          <button
+            class="btn btn-primary"
+            @click="handleSendMessage"
+            :disabled="!newMessage.trim()"
+          >
+            <i class="fas fa-paper-plane"></i>
+            发送
+          </button>
+          <button class="btn btn-secondary" type="button" title="常用表情">
+            <i class="fas fa-smile"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -182,8 +179,12 @@ export default {
       type: Array,
       default: () => [],
     },
+    userInfo: {
+      type: Object,
+      default: () => ({})
+    }
   },
-  emits: ["send-message", "search", "like", "reply"],
+  emits: ["send-message", "discussion-search", "like-discussion", "reply-discussion"],
   setup(props, { emit }) {
     const discussionContent = ref(null);
     const newMessage = ref("");
@@ -194,7 +195,11 @@ export default {
     const replyingTo = ref(null);
     const replyContent = ref("");
     const onlineCount = ref(128);
-    const currentUserId = ref(1); // 模拟当前用户ID
+
+    // 计算当前用户ID
+    const currentUserId = computed(() => {
+      return props.userInfo.user_id || 1;
+    });
 
     // 计算属性
     const totalDiscussions = computed(() => {
@@ -238,7 +243,7 @@ export default {
           (a, b) => new Date(b.create_time) - new Date(a.create_time)
         );
       } else if (sortBy.value === "popular") {
-        discussions.sort((a, b) => b.like_count - a.like_count);
+        discussions.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
       }
 
       return discussions;
@@ -249,30 +254,28 @@ export default {
       if (!newMessage.value.trim()) return;
 
       try {
-        // 
+        // 调用发送评论API
         await postComment({
           videoId: props.videoId,
-          userId: currentUserId.value,
           content: newMessage.value.trim(),
-          // parentId 
+          userId: currentUserId.value
         });
 
         newMessage.value = "";
-        emit("send-message", newMessage.value);
-
-        // 
-        console.log("");
-
+        
+        // 触发事件通知父组件重新获取数据
+        emit("send-message");
+        
         scrollToBottom();
       } catch (error) {
-        console.error("", error);
-        alert("");
+        console.error("发送消息失败:", error);
+        alert("发送失败，请重试");
       }
     };
 
     const emitSearch = () => {
       if (!props.videoId) return;
-      emit("search", {
+      emit("discussion-search", {
         keyword: searchKeyword.value,
         sort: sortBy.value,
       });
@@ -297,10 +300,11 @@ export default {
 
     const handleLike = async (commentId) => {
       try {
-        await likeComment(commentId); // 
-        emit("like", commentId);
+        await likeComment(commentId);
+        // 触发点赞事件
+        emit("like-discussion", commentId);
       } catch (error) {
-        console.error("", error);
+        console.error("点赞失败:", error);
       }
     };
 
@@ -315,17 +319,21 @@ export default {
         await postComment({
           videoId: props.videoId,
           content: replyContent.value.trim(),
-          userId: currentUserId.value,
-          parentId: parentCommentId, // 
+          parentId: parentCommentId,
+          userId: currentUserId.value
         });
+        
         replyContent.value = "";
         replyingTo.value = null;
-        emit("reply", { parentCommentId, content: replyContent.value });
-
-        // 
+        
+        // 触发回复事件
+        emit("reply-discussion", { 
+          parentCommentId, 
+          content: replyContent.value 
+        });
       } catch (error) {
-        console.error("", error);
-        alert("");
+        console.error("回复失败:", error);
+        alert("回复失败，请重试");
       }
     };
 
@@ -334,27 +342,35 @@ export default {
       replyContent.value = "";
     };
 
-    // 
+    // 工具函数
     const formatTime = (timeString) => {
+      if (!timeString) return "";
+      
       const time = new Date(timeString);
       const now = new Date();
       const diff = now - time;
 
       if (diff < 60000) {
-        // 1
-        return "";
+        // 1分钟内
+        return "刚刚";
       } else if (diff < 3600000) {
-        // 1
-        return `${Math.floor(diff / 60000)}`;
+        // 1小时内
+        return `${Math.floor(diff / 60000)}分钟前`;
       } else if (diff < 86400000) {
-        // 1
-        return `${Math.floor(diff / 3600000)}`;
+        // 1天内
+        return `${Math.floor(diff / 3600000)}小时前`;
       } else {
         return time.toLocaleDateString();
       }
     };
 
-    // 
+    // 获取头像文本
+    const getAvatarText = (userName) => {
+      if (!userName) return "用";
+      return userName.charAt(0);
+    };
+
+    // 滚动到底部
     const scrollToBottom = () => {
       nextTick(() => {
         if (discussionContent.value) {
@@ -364,7 +380,7 @@ export default {
       });
     };
 
-    // 
+    // 监听讨论数据变化
     watch(
       () => props.discussions,
       () => {
@@ -396,6 +412,7 @@ export default {
       submitReply,
       cancelReply,
       formatTime,
+      getAvatarText
     };
   },
 };
@@ -408,26 +425,7 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.discussion-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.discussion-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--secondary), #4caf50);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1rem;
+  position: relative;
 }
 
 .discussion-stats {
@@ -438,6 +436,22 @@ export default {
   border-bottom: 1px solid var(--border);
   font-size: 0.8rem;
   color: var(--gray);
+  flex-shrink: 0;
+}
+
+.discussion-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.discussion-stat-item .label {
+  color: var(--text-secondary);
+}
+
+.discussion-stat-item .value {
+  font-weight: 600;
+  color: var(--primary);
 }
 
 .discussion-controls {
@@ -446,6 +460,7 @@ export default {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .search-box {
@@ -497,10 +512,20 @@ export default {
   border-color: var(--primary);
 }
 
+/* 可滚动的讨论内容区域 */
+.discussion-content-wrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 重要：允许内容区域收缩 */
+}
+
 .discussion-content {
   flex: 1;
   overflow-y: auto;
   padding: 15px;
+  min-height: 0; /* 重要：允许内容区域滚动 */
 }
 
 .message {
@@ -618,6 +643,81 @@ export default {
   justify-content: flex-end;
 }
 
+/* 固定的发送区域 */
+.discussion-input-fixed {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: white;
+  padding: 15px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.discussion-input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.discussion-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.discussion-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+}
+
+.input-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1557b0;
+}
+
+.btn-primary:disabled {
+  background: var(--border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  background: var(--light);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--border);
+}
+
 .btn-sm {
   padding: 4px 8px;
   font-size: 0.75rem;
@@ -639,27 +739,6 @@ export default {
   font-size: 0.9rem;
 }
 
-.discussion-input-area {
-  padding: 15px;
-  border-top: 1px solid var(--border);
-}
-
-.discussion-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
-  transition: all 0.3s ease;
-}
-
-.discussion-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
-}
-
 /* 滚动条样式 */
 .discussion-content::-webkit-scrollbar {
   width: 6px;
@@ -676,5 +755,17 @@ export default {
 
 .discussion-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* CSS 变量定义 */
+.discussion-sidebar {
+  --primary: #1a73e8;
+  --primary-light: #e8f0fe;
+  --secondary: #f8f9fa;
+  --light: #f8f9fa;
+  --border: #dadce0;
+  --gray: #5f6368;
+  --text-primary: #202124;
+  --text-secondary: #5f6368;
 }
 </style>

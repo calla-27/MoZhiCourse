@@ -7,6 +7,7 @@
           ref="videoPlayer"
           :key="videoKey" 
           preload="metadata"
+          controls
           @timeupdate="handleTimeUpdate"
           @loadedmetadata="handleVideoLoaded"
           @play="handlePlay"
@@ -15,6 +16,7 @@
           @seeking="handleSeeking"
           @ratechange="handleRateChange"
           @error="handleVideoError"
+          @click="togglePlay"
         >
           <source :src="effectiveVideoUrl" type="video/mp4">
           <source :src="effectiveVideoUrl" type="video/webm">
@@ -34,7 +36,10 @@
           <button class="retry-btn" @click="retryLoad">重试</button>
         </div>
         
-        <div v-if="!isPlaying && effectiveVideoUrl && !loading && !videoError" class="video-overlay" @click="togglePlay">
+        <!-- 自定义播放控制覆盖层 -->
+        <div v-if="!isPlaying && effectiveVideoUrl && !loading && !videoError" 
+             class="video-overlay" 
+             @click="togglePlay">
           <button class="play-btn">
             <i class="fas fa-play"></i>
           </button>
@@ -42,22 +47,36 @@
       </div>
     </div>
     
+    <!-- 自定义控制条 -->
     <div class="video-controls" v-if="effectiveVideoUrl && !videoError">
       <button class="control-btn" @click="togglePlay">
         <i :class="isPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
       </button>
+      
       <button class="control-btn" @click="skipBackward">
         <i class="fas fa-step-backward"></i>
       </button>
+      
       <button class="control-btn" @click="skipForward">
         <i class="fas fa-step-forward"></i>
       </button>
       
-      <div class="progress-bar" @click="handleProgressClick">
-        <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
+      <!-- 进度条 -->
+      <div class="progress-container">
+        <div class="time-display">{{ currentTimeFormatted }}</div>
+        
+        <div class="progress-bar" @click="handleProgressClick" ref="progressBar">
+          <div class="progress-background"></div>
+          <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
+          <div class="progress-thumb" 
+               :style="{ left: progressPercentage + '%' }"
+               @mousedown="startDrag"
+               @touchstart="startDrag">
+          </div>
+        </div>
+        
+        <div class="time-display">{{ durationFormatted }}</div>
       </div>
-      
-      <div class="time-display">{{ currentTimeFormatted }} / {{ durationFormatted }}</div>
       
       <button class="control-btn" @click="toggleMute">
         <i :class="isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up'"></i>
@@ -89,23 +108,23 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { recordLearningBehavior } from '@/api/courseVideo'
 
 export default {
   name: 'CourseVideoPlayer',
   props: {
-    video: {
-      type: Object,
-      default: () => ({})
-    },
     videoUrl: {
       type: String,
       default: ''
+    },
+    initialProgress: {
+      type: Number,
+      default: 0
     }
   },
   emits: ['progress-update', 'behavior-record'],
   setup(props, { emit }) {
     const videoPlayer = ref(null)
+    const progressBar = ref(null)
     const isPlaying = ref(false)
     const isMuted = ref(false)
     const currentTime = ref(0)
@@ -115,9 +134,10 @@ export default {
     const lastProgressUpdate = ref(0)
     const loading = ref(false)
     const videoError = ref('')
-    const videoKey = ref(0) // 用于强制重新渲染video元素
+    const videoKey = ref(0)
+    const isDragging = ref(false)
 
-    // 计算有效的视频URL - 修复URL处理逻辑
+    // 计算有效的视频URL
     const effectiveVideoUrl = computed(() => {
       if (!props.videoUrl) {
         console.log('视频URL为空')
@@ -194,7 +214,7 @@ export default {
     const retryLoad = async () => {
       videoError.value = ''
       loading.value = true
-      videoKey.value++ // 强制重新渲染video元素
+      videoKey.value++
       
       await nextTick()
       
@@ -213,10 +233,8 @@ export default {
       try {
         if (isPlaying.value) {
           videoPlayer.value.pause()
-          await recordBehavior('pause')
         } else {
           await videoPlayer.value.play()
-          await recordBehavior('play')
         }
       } catch (error) {
         console.error('播放控制失败:', error)
@@ -244,19 +262,21 @@ export default {
     const skipBackward = () => {
       if (!videoPlayer.value) return
       videoPlayer.value.currentTime = Math.max(0, videoPlayer.value.currentTime - 10)
-      recordBehavior('seek')
     }
 
     const skipForward = () => {
       if (!videoPlayer.value) return
       videoPlayer.value.currentTime = Math.min(duration.value, videoPlayer.value.currentTime + 10)
-      recordBehavior('seek')
     }
 
     const handleTimeUpdate = () => {
-      if (!videoPlayer.value) return
+      if (!videoPlayer.value || isDragging.value) return
+      
       currentTime.value = videoPlayer.value.currentTime
-      progressPercentage.value = (currentTime.value / duration.value) * 100
+      
+      if (duration.value > 0) {
+        progressPercentage.value = (currentTime.value / duration.value) * 100
+      }
       
       // 每5秒上报一次进度，避免频繁请求
       const currentSeconds = Math.floor(currentTime.value)
@@ -270,32 +290,82 @@ export default {
       if (!videoPlayer.value) return
       duration.value = videoPlayer.value.duration
       loading.value = false
+      
+      // 设置初始进度
+      if (props.initialProgress > 0 && duration.value > 0) {
+        const targetTime = (props.initialProgress / 100) * duration.value
+        videoPlayer.value.currentTime = targetTime
+        currentTime.value = targetTime
+        progressPercentage.value = props.initialProgress
+      }
+      
       console.log('视频加载完成，时长:', duration.value)
     }
 
-    const handleVideoEnd = async () => {
+    const handleVideoEnd = () => {
       isPlaying.value = false
+      progressPercentage.value = 100
       emit('progress-update', 100)
-      await recordBehavior('complete')
     }
 
+    // 进度条点击跳转
     const handleProgressClick = (event) => {
-      if (!videoPlayer.value) return
-      const progressBar = event.currentTarget
-      const rect = progressBar.getBoundingClientRect()
-      const clickPosition = (event.clientX - rect.left) / progressBar.offsetWidth
-      videoPlayer.value.currentTime = clickPosition * duration.value
-      recordBehavior('seek')
+      if (!videoPlayer.value || !progressBar.value) return
+      
+      const rect = progressBar.value.getBoundingClientRect()
+      const clickPosition = (event.clientX - rect.left) / progressBar.value.offsetWidth
+      const newTime = clickPosition * duration.value
+      
+      videoPlayer.value.currentTime = newTime
+      currentTime.value = newTime
+      progressPercentage.value = clickPosition * 100
+    }
+
+    // 进度条拖拽功能
+    const startDrag = (event) => {
+      isDragging.value = true
+      event.preventDefault()
+      
+      const handleDrag = (moveEvent) => {
+        if (!videoPlayer.value || !progressBar.value || !isDragging.value) return
+        
+        const rect = progressBar.value.getBoundingClientRect()
+        const clientX = moveEvent.clientX || (moveEvent.touches && moveEvent.touches[0].clientX)
+        if (!clientX) return
+        
+        let position = (clientX - rect.left) / progressBar.value.offsetWidth
+        position = Math.max(0, Math.min(1, position))
+        
+        progressPercentage.value = position * 100
+      }
+      
+      const stopDrag = () => {
+        if (!videoPlayer.value || !isDragging.value) return
+        
+        const newTime = (progressPercentage.value / 100) * duration.value
+        videoPlayer.value.currentTime = newTime
+        currentTime.value = newTime
+        
+        isDragging.value = false
+        document.removeEventListener('mousemove', handleDrag)
+        document.removeEventListener('touchmove', handleDrag)
+        document.removeEventListener('mouseup', stopDrag)
+        document.removeEventListener('touchend', stopDrag)
+      }
+      
+      document.addEventListener('mousemove', handleDrag)
+      document.addEventListener('touchmove', handleDrag, { passive: false })
+      document.addEventListener('mouseup', stopDrag)
+      document.addEventListener('touchend', stopDrag)
     }
 
     const handleSpeedChange = () => {
       if (!videoPlayer.value) return
       videoPlayer.value.playbackRate = parseFloat(playbackRate.value)
-      recordBehavior('speed_change', { playSpeed: playbackRate.value })
     }
 
     const handleSeeking = () => {
-      recordBehavior('seek')
+      console.log('视频跳转中...')
     }
 
     const handleRateChange = () => {
@@ -310,30 +380,6 @@ export default {
         videoPlayer.value.requestFullscreen?.()
       } else {
         document.exitFullscreen?.()
-      }
-    }
-
-    // 记录学习行为
-    const recordBehavior = async (behaviorType, extraData = {}) => {
-      try {
-        await recordLearningBehavior({
-          videoId: props.video?.video_id,
-          behaviorType,
-          currentTime: currentTime.value,
-          duration: duration.value,
-          playSpeed: playbackRate.value,
-          timestamp: new Date().toISOString(),
-          ...extraData
-        })
-        
-        emit('behavior-record', {
-          behaviorType,
-          currentTime: currentTime.value,
-          duration: duration.value,
-          playSpeed: playbackRate.value
-        })
-      } catch (error) {
-        console.error('记录学习行为失败:', error)
       }
     }
 
@@ -391,12 +437,23 @@ export default {
         currentTime.value = 0
         progressPercentage.value = 0
         lastProgressUpdate.value = 0
-        videoKey.value++ // 强制重新渲染
+        videoKey.value++
+      }
+    })
+
+    // 监听初始进度变化
+    watch(() => props.initialProgress, (newProgress) => {
+      if (videoPlayer.value && duration.value > 0 && newProgress > 0) {
+        const targetTime = (newProgress / 100) * duration.value
+        videoPlayer.value.currentTime = targetTime
+        currentTime.value = targetTime
+        progressPercentage.value = newProgress
       }
     })
 
     return {
       videoPlayer,
+      progressBar,
       isPlaying,
       isMuted,
       currentTime,
@@ -418,6 +475,7 @@ export default {
       handleVideoLoaded,
       handleVideoEnd,
       handleProgressClick,
+      startDrag,
       handleSpeedChange,
       handleSeeking,
       handleRateChange,
@@ -463,6 +521,7 @@ export default {
   height: 100%;
   object-fit: contain;
   max-height: 70vh;
+  cursor: pointer;
 }
 
 .video-loading {
@@ -558,6 +617,7 @@ export default {
   background: rgba(0,0,0,0.3);
   cursor: pointer;
   transition: opacity 0.3s ease;
+  z-index: 10;
 }
 
 .play-btn {
@@ -584,6 +644,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 15px;
+  z-index: 20;
 }
 
 .control-btn {
@@ -595,10 +656,27 @@ export default {
   padding: 8px;
   border-radius: 50%;
   transition: background 0.3s ease;
+  flex-shrink: 0;
 }
 
 .control-btn:hover {
   background: rgba(255,255,255,0.1);
+}
+
+.progress-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.time-display {
+  color: white;
+  font-size: 0.9rem;
+  min-width: 45px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .progress-bar {
@@ -608,6 +686,17 @@ export default {
   border-radius: 3px;
   position: relative;
   cursor: pointer;
+  min-width: 100px;
+}
+
+.progress-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,0.3);
+  border-radius: 3px;
 }
 
 .progress-fill {
@@ -616,17 +705,29 @@ export default {
   background: var(--primary);
   border-radius: 3px;
   transition: width 0.1s ease;
+  z-index: 1;
 }
 
-.time-display {
-  color: white;
-  font-size: 0.9rem;
-  min-width: 100px;
-  text-align: center;
+.progress-thumb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.progress-thumb:hover {
+  transform: translate(-50%, -50%) scale(1.2);
 }
 
 .speed-control {
   position: relative;
+  flex-shrink: 0;
 }
 
 .speed-select {
@@ -637,10 +738,33 @@ export default {
   border-radius: 4px;
   font-size: 0.8rem;
   cursor: pointer;
+  min-width: 60px;
 }
 
 .speed-select:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .video-controls {
+    padding: 10px 15px;
+    gap: 10px;
+  }
+  
+  .control-btn {
+    font-size: 1rem;
+    padding: 6px;
+  }
+  
+  .time-display {
+    font-size: 0.8rem;
+    min-width: 40px;
+  }
+  
+  .progress-container {
+    gap: 8px;
+  }
 }
 </style>

@@ -14,20 +14,49 @@ const categoryRoutes = require('./routes/categories');
 const reviewRoutes = require('./routes/reviews');
 const teacherRoutes = require('./routes/teachers');
 const commentRoutes = require('./routes/commentRoutes');
+const communityRoutes = require('./routes/community');
+const personalCenterRoutes = require('./routes/personalCenter');
+const teacherCenterRoutes = require('./routes/teacherCenter');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 允许的跨域来源
-const defaultOrigins = ['http://localhost:3000', 'http://localhost:8080'];
+const defaultOrigins = [
+  'http://localhost:3000', 
+  'http://localhost:8080', 
+  'http://localhost:8083',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:8080', 
+  'http://127.0.0.1:8083',
+  'http://127.0.0.1:54435'  // Cascade浏览器预览地址
+];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : defaultOrigins;
 
 // 通用中间件
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: function (origin, callback) {
+    // 允许没有origin的请求（如移动应用或Postman）
+    if (!origin) return callback(null, true);
+    
+    // 检查是否在允许列表中
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    // 允许所有本地开发地址
+    if (origin.match(/^http:\/\/(localhost|127\.0\.0\.1):\d+$/)) {
+      return callback(null, true);
+    }
+    
+    const msg = 'CORS策略不允许来自该源的请求: ' + origin;
+    return callback(new Error(msg), false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -49,23 +78,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/comment', commentRoutes);
-
-// 模拟用户数据（兼容旧接口）
-app.get('/api/user/:userId', (req, res) => {
-  const { userId } = req.params;
-  res.json({
-    code: 200,
-    message: '成功',
-    data: {
-      user_id: parseInt(userId, 10),
-      user_name: '李小明',
-      email: 'student1@icoursera.com',
-      occupation: '大学生',
-      learning_goal: '学习Python编程',
-      role: 'learner'
-    }
-  });
-});
+app.use('/api/community', communityRoutes);
+app.use('/api/personal', personalCenterRoutes);
+app.use('/api/teacher', teacherCenterRoutes);
 
 // 根路径 - API 文档首页
 app.get('/', (req, res) => {
@@ -80,6 +95,9 @@ app.get('/', (req, res) => {
       '评价接口': '/api/reviews',
       '评论接口': '/api/comment',
       '讲师接口': '/api/teachers',
+      '学习社区': '/api/community',
+      '个人中心': '/api/personal',
+      '教师中心': '/api/teacher',
       '健康检查': '/api/health'
     }
   });
@@ -129,6 +147,8 @@ const startServer = async () => {
 ║     - 评价: /api/reviews                           ║
 ║     - 评论: /api/comment                           ║
 ║     - 讲师: /api/teachers                          ║
+║     - 学习社区: /api/community                     ║
+║     - 个人中心: /api/personal                      ║
 ║                                                   ║
 ╚═══════════════════════════════════════════════════╝
       `);

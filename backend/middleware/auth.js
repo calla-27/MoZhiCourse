@@ -5,8 +5,12 @@ const authMiddleware = (req, res, next) => {
   try {
     // 从请求头获取token
     const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    console.log('🔐 认证中间件 - Authorization头:', req.headers.authorization);
+    console.log('🎫 提取的token:', token ? `${token.substring(0, 20)}...` : 'null');
 
     if (!token) {
+      console.log('❌ 未提供认证令牌');
       return res.status(401).json({
         success: false,
         message: '未提供认证令牌'
@@ -14,7 +18,8 @@ const authMiddleware = (req, res, next) => {
     }
 
     // 验证token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mozhicourse-secret-key-2024');
+    console.log('✅ JWT解析成功:', decoded);
     req.user = decoded;
     next();
   } catch (error) {

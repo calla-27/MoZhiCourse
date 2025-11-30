@@ -12,8 +12,8 @@ exports.getCourseReviews = async (req, res, next) => {
       `SELECT 
         r.review_id, r.rating, r.review_content, r.created_at,
         u.user_id, u.user_name, u.avatar_url, u.occupation
-       FROM t_course_review r
-       INNER JOIN t_user u ON r.user_id = u.user_id
+       FROM course_review r
+       INNER JOIN user u ON r.user_id = u.user_id
        WHERE r.course_id = ?
        ORDER BY r.created_at DESC
        LIMIT ? OFFSET ?`,
@@ -22,7 +22,7 @@ exports.getCourseReviews = async (req, res, next) => {
 
     // 查询评价总数
     const [countResult] = await pool.query(
-      'SELECT COUNT(*) as total FROM t_course_review WHERE course_id = ?',
+      'SELECT COUNT(*) as total FROM course_review WHERE course_id = ?',
       [id]
     );
 
@@ -62,7 +62,7 @@ exports.addReview = async (req, res, next) => {
 
     // 检查是否已报名课程
     const [userCourse] = await pool.query(
-      'SELECT id FROM t_user_course WHERE user_id = ? AND course_id = ?',
+      'SELECT id FROM user_course WHERE user_id = ? AND course_id = ?',
       [userId, id]
     );
 
@@ -75,7 +75,7 @@ exports.addReview = async (req, res, next) => {
 
     // 检查是否已评价
     const [existing] = await pool.query(
-      'SELECT review_id FROM t_course_review WHERE user_id = ? AND course_id = ?',
+      'SELECT review_id FROM course_review WHERE user_id = ? AND course_id = ?',
       [userId, id]
     );
 
@@ -88,20 +88,20 @@ exports.addReview = async (req, res, next) => {
 
     // 插入评价
     const [result] = await pool.query(
-      'INSERT INTO t_course_review (course_id, user_id, rating, review_content) VALUES (?, ?, ?, ?)',
+      'INSERT INTO course_review (course_id, user_id, rating, review_content) VALUES (?, ?, ?, ?)',
       [id, userId, rating, review_content || null]
     );
 
     // 更新课程评分
     const [stats] = await pool.query(
       `SELECT AVG(rating) as avg_rating, COUNT(*) as count 
-       FROM t_course_review 
+       FROM course_review 
        WHERE course_id = ?`,
       [id]
     );
 
     await pool.query(
-      'UPDATE t_course SET rating = ?, rating_count = ? WHERE course_id = ?',
+      'UPDATE course SET rating = ?, rating_count = ? WHERE course_id = ?',
       [parseFloat(stats[0].avg_rating).toFixed(1), stats[0].count, id]
     );
 
@@ -110,8 +110,8 @@ exports.addReview = async (req, res, next) => {
       `SELECT 
         r.review_id, r.rating, r.review_content, r.created_at,
         u.user_id, u.user_name, u.avatar_url, u.occupation
-       FROM t_course_review r
-       INNER JOIN t_user u ON r.user_id = u.user_id
+       FROM course_review r
+       INNER JOIN user u ON r.user_id = u.user_id
        WHERE r.review_id = ?`,
       [result.insertId]
     );
@@ -135,7 +135,7 @@ exports.updateReview = async (req, res, next) => {
 
     // 检查评价是否存在且属于当前用户
     const [reviews] = await pool.query(
-      'SELECT review_id, course_id FROM t_course_review WHERE review_id = ? AND user_id = ?',
+      'SELECT review_id, course_id FROM course_review WHERE review_id = ? AND user_id = ?',
       [reviewId, userId]
     );
 
@@ -178,20 +178,20 @@ exports.updateReview = async (req, res, next) => {
     values.push(reviewId);
 
     await pool.query(
-      `UPDATE t_course_review SET ${updates.join(', ')} WHERE review_id = ?`,
+      `UPDATE course_review SET ${updates.join(', ')} WHERE review_id = ?`,
       values
     );
 
     // 重新计算课程评分
     const [stats] = await pool.query(
       `SELECT AVG(rating) as avg_rating, COUNT(*) as count 
-       FROM t_course_review 
+       FROM course_review 
        WHERE course_id = ?`,
       [courseId]
     );
 
     await pool.query(
-      'UPDATE t_course SET rating = ?, rating_count = ? WHERE course_id = ?',
+      'UPDATE course SET rating = ?, rating_count = ? WHERE course_id = ?',
       [parseFloat(stats[0].avg_rating).toFixed(1), stats[0].count, courseId]
     );
 
@@ -212,7 +212,7 @@ exports.deleteReview = async (req, res, next) => {
 
     // 检查评价是否存在且属于当前用户
     const [reviews] = await pool.query(
-      'SELECT review_id, course_id FROM t_course_review WHERE review_id = ? AND user_id = ?',
+      'SELECT review_id, course_id FROM course_review WHERE review_id = ? AND user_id = ?',
       [reviewId, userId]
     );
 
@@ -226,12 +226,12 @@ exports.deleteReview = async (req, res, next) => {
     const courseId = reviews[0].course_id;
 
     // 删除评价
-    await pool.query('DELETE FROM t_course_review WHERE review_id = ?', [reviewId]);
+    await pool.query('DELETE FROM course_review WHERE review_id = ?', [reviewId]);
 
     // 重新计算课程评分
     const [stats] = await pool.query(
       `SELECT AVG(rating) as avg_rating, COUNT(*) as count 
-       FROM t_course_review 
+       FROM course_review 
        WHERE course_id = ?`,
       [courseId]
     );
@@ -239,7 +239,7 @@ exports.deleteReview = async (req, res, next) => {
     const avgRating = stats[0].count > 0 ? parseFloat(stats[0].avg_rating).toFixed(1) : 0;
 
     await pool.query(
-      'UPDATE t_course SET rating = ?, rating_count = ? WHERE course_id = ?',
+      'UPDATE course SET rating = ?, rating_count = ? WHERE course_id = ?',
       [avgRating, stats[0].count, courseId]
     );
 

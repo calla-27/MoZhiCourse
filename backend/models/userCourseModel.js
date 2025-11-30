@@ -2,7 +2,7 @@ const { pool } = require('../config/database');
 
 const getEnrollment = async (userId, courseId) => {
   const [rows] = await pool.query(
-    'SELECT id, is_favorite, progress FROM t_user_course WHERE user_id = ? AND course_id = ?',
+    'SELECT id, is_favorite, progress FROM user_course WHERE user_id = ? AND course_id = ?',
     [userId, courseId]
   );
 
@@ -11,21 +11,21 @@ const getEnrollment = async (userId, courseId) => {
 
 const createEnrollment = async (userId, courseId) => {
   await pool.query(
-    'INSERT INTO t_user_course (user_id, course_id, enroll_time) VALUES (?, ?, NOW())',
+    'INSERT INTO user_course (user_id, course_id, enroll_time) VALUES (?, ?, NOW())',
     [userId, courseId]
   );
 };
 
 const setFavoriteStatus = async (userId, courseId, isFavorite) => {
   await pool.query(
-    'UPDATE t_user_course SET is_favorite = ? WHERE user_id = ? AND course_id = ?',
+    'UPDATE user_course SET is_favorite = ? WHERE user_id = ? AND course_id = ?',
     [isFavorite, userId, courseId]
   );
 };
 
 const updateEnrollmentProgress = async (userId, courseId, progress) => {
   await pool.query(
-    'UPDATE t_user_course SET progress = ?, last_learn_time = NOW() WHERE user_id = ? AND course_id = ?',
+    'UPDATE user_course SET progress = ?, last_learn_time = NOW() WHERE user_id = ? AND course_id = ?',
     [progress, userId, courseId]
   );
 };
@@ -48,9 +48,9 @@ const getUserCourses = async (userId, type) => {
        c.difficulty_level, c.rating,
        uc.progress, uc.enroll_time, uc.last_learn_time, uc.is_favorite,
        u.user_name AS teacher_name
-     FROM t_user_course uc
-     INNER JOIN t_course c ON uc.course_id = c.course_id
-     LEFT JOIN t_user u ON c.teacher_user_id = u.user_id
+     FROM user_course uc
+     INNER JOIN course c ON uc.course_id = c.course_id
+     LEFT JOIN user u ON c.teacher_user_id = u.user_id
      WHERE ${whereCondition}
      ORDER BY uc.last_learn_time DESC, uc.enroll_time DESC`,
     params

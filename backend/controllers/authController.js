@@ -1,17 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const {
-  getUserByUserName,
-  getUserByAccount,
-  getUserByEmail,
-  createUser,
-  getUserById,
-  updateLastLoginTime,
-  getUserPasswordHash,
-  updateUserPassword,
-  updateUserProfile
-} = require('../models/userModel');
+const UserModel = require('../models/userModel');
 
 // 生成JWT Token
 const generateToken = (user) => {
@@ -21,91 +11,91 @@ const generateToken = (user) => {
       userName: user.user_name,
       role: user.role
     },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || 'mozhicourse-secret-key-2024',
     {
-      expiresIn: process.env.JWT_EXPIRE
+      expiresIn: process.env.JWT_EXPIRE || '7d'
     }
   );
 };
 
-// 用户注册
+// 用户注册（只需用户名和密码）
 exports.register = async (req, res, next) => {
   try {
-    const { user_name, email, password, occupation, learning_goal, role } = req.body;
+    console.log('📝 收到注册请求，请求体:', req.body);
+    const { user_name, password, role } = req.body;
 
     // 验证必填字段
     if (!user_name || !password) {
+      console.log('❌ 验证失败：缺少必填字段');
       return res.status(400).json({
         success: false,
         message: '用户名和密码为必填项'
       });
     }
+    
+    console.log('✅ 必填字段验证通过');
 
-    // 验证邮箱格式（如果提供）
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: '邮箱格式不正确'
-      });
-    }
-
+    console.log(' 检查用户名是否已存在:', user_name);
     // 检查用户名是否已存在
-    const existing = await getUserByUserName(user_name);
+    const existing = await UserModel.findByUserName(user_name);
 
-    if (existing.length > 0) {
+    if (existing) {
+      console.log('❌ 用户名已存在');
       return res.status(400).json({
         success: false,
         message: '该用户名已被注册'
       });
     }
 
-    // 检查邮箱是否已存在
-    if (email) {
-      const existingEmail = await getUserByEmail(email);
+    // 自动生成唯一邮箱（数据库要求）
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const email = `${user_name.replace(/\s+/g, '_')}_${timestamp}_${randomStr}@mzcourse.local`;
+    console.log('📧 自动生成邮箱:', email);
 
-      if (existingEmail.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: '该邮箱已被注册'
-        });
-      }
-    }
-
-    // 角色校验（仅允许 learner / instructor，其他情况默认 learner）
+    // 角色校验
     let finalRole = 'learner';
     if (role === 'instructor' || role === 'learner') {
       finalRole = role;
     }
+    console.log('👤 用户角色:', finalRole);
 
     // 密码加密
+    console.log('🔐 开始加密密码...');
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
+    console.log('✅ 密码加密完成');
 
     // 插入用户数据
-    const userId = await createUser({
+    console.log('💾 准备插入用户数据:', { user_name, role: finalRole });
+    const newUser = await UserModel.create({
       user_name,
       email,
       password_hash,
-      occupation,
-      learning_goal,
       role: finalRole,
     });
-
-    // 获取新创建的用户信息
-    const newUser = await getUserById(userId);
+    console.log('✅ 用户创建成功，ID:', newUser.user_id);
 
     // 生成token
-    const token = generateToken(newUser[0]);
+    console.log('🎫 生成 JWT token...');
+    const token = generateToken(newUser);
+    console.log('✅ Token 生成成功');
 
+    console.log('🎉 注册流程完成，返回响应');
     res.status(201).json({
       success: true,
       message: '注册成功',
       data: {
-        user: newUser[0],
+        user: newUser,
         token
       }
     });
   } catch (error) {
+    console.error('💥 注册过程中发生错误:');
+    console.error('错误类型:', error.name);
+    console.error('错误消息:', error.message);
+    console.error('错误代码:', error.code);
+    console.error('完整错误:', error);
     next(error);
   }
 };
@@ -125,16 +115,14 @@ exports.login = async (req, res, next) => {
     }
 
     // 查询用户（支持 phone 或 user_name 作为账号）
-    const users = await getUserByAccount(account);
+    const user = await UserModel.findByAccount(account);
 
-    if (users.length === 0) {
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: '用户名或密码错误'
       });
     }
-
-    const user = users[0];
 
     // 检查账户状态
     if (!user.is_active) {
@@ -155,7 +143,7 @@ exports.login = async (req, res, next) => {
     }
 
     // 更新最后登录时间
-    await updateLastLoginTime(user.user_id);
+    await UserModel.updateLastLoginTime(user.user_id);
 
     // 删除敏感信息
     delete user.password_hash;

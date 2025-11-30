@@ -10,18 +10,7 @@
           <input
             v-model="form.user_name"
             type="text"
-            placeholder="请输入你的名字"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label>手机号</label>
-          <input
-            v-model="form.phone"
-            type="text"
-            maxlength="11"
-            placeholder="请输入11位手机号"
+            placeholder="请输入用户名"
             required
           />
         </div>
@@ -31,7 +20,7 @@
           <input
             v-model="form.password"
             type="password"
-            placeholder="请输入登录密码"
+            placeholder="请输入密码"
             required
           />
         </div>
@@ -42,7 +31,7 @@
             <label class="role-option">
               <input
                 type="radio"
-                value="student"
+                value="learner"
                 v-model="form.role"
               />
               <span>我是学生</span>
@@ -50,7 +39,7 @@
             <label class="role-option">
               <input
                 type="radio"
-                value="teacher"
+                value="instructor"
                 v-model="form.role"
               />
               <span>我是老师</span>
@@ -81,7 +70,6 @@ const router = useRouter()
 
 const form = ref({
   user_name: '',
-  phone: '',
   password: '',
   role: 'learner',
 })
@@ -90,13 +78,12 @@ const loading = ref(false)
 const error = ref('')
 
 const handleSubmit = async () => {
-  if (!form.value.user_name || !form.value.phone || !form.value.password) return
+  if (!form.value.user_name || !form.value.password) return
   loading.value = true
   error.value = ''
   try {
     const res = await register({
       user_name: form.value.user_name,
-      phone: form.value.phone,
       password: form.value.password,
       role: form.value.role,
     })
@@ -105,7 +92,7 @@ const handleSubmit = async () => {
     localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(user))
 
-    router.push('/course/7')
+    router.push('/search')
   } catch (e) {
     error.value = e.response?.data?.message || '注册失败，请稍后重试'
   } finally {
