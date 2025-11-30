@@ -66,7 +66,6 @@ class Course {
         c.rating,
         c.student_count,
         c.created_time,
-<<<<<<< HEAD
         u.user_name AS teacher_name,
         COALESCE(COUNT(DISTINCT cv.video_id), 0) AS video_count
        FROM course c
@@ -79,13 +78,6 @@ class Course {
                 (video_count > 0) DESC,
                 c.student_count DESC,
                 c.created_time DESC`
-=======
-        u.user_name as teacher_name
-       FROM course c
-       LEFT JOIN user u ON c.teacher_user_id = u.user_id
-       WHERE c.is_online = 1
-       ORDER BY c.created_time DESC`
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     );
     return courses;
   }
@@ -102,7 +94,6 @@ class Course {
         c.rating,
         c.student_count,
         c.created_time,
-<<<<<<< HEAD
         u.user_name AS teacher_name,
         COALESCE(COUNT(DISTINCT cv.video_id), 0) AS video_count
        FROM course c
@@ -115,13 +106,6 @@ class Course {
                 (video_count > 0) DESC,
                 c.student_count DESC,
                 c.created_time DESC`,
-=======
-        u.user_name as teacher_name
-       FROM course c
-       LEFT JOIN user u ON c.teacher_user_id = u.user_id
-       WHERE (c.course_name LIKE ? OR c.course_desc LIKE ?) AND c.is_online = 1
-       ORDER BY c.created_time DESC`,
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
       [`%${keyword}%`, `%${keyword}%`]
     );
     return courses;

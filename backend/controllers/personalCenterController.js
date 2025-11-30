@@ -13,7 +13,6 @@ const getUserProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: '用户不存在' });
     }
 
-<<<<<<< HEAD
     // 从 user_detail 读取个性签名等扩展信息
     const [detailRows] = await execute(
       'SELECT user_intro FROM user_detail WHERE user_id = ?',
@@ -21,8 +20,6 @@ const getUserProfile = async (req, res) => {
     );
     const detail = detailRows?.[0] || {};
 
-=======
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     // 简化的学习统计数据
     const learningStats = {
       total_learning_hours: 0,
@@ -42,13 +39,8 @@ const getUserProfile = async (req, res) => {
         role: user.role,
         registerTime: user.register_time,
         lastLoginTime: user.last_login_time,
-<<<<<<< HEAD
         userIntro: detail.user_intro || '',
         learningStats
-=======
-        userIntro: '', // 暂时为空，因为数据库中没有这个字段
-        learningStats: learningStats
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
       }
     });
 
@@ -79,7 +71,6 @@ const updateUserProfile = async (req, res) => {
       return res.status(400).json({ success: false, message: '邮箱已存在' });
     }
 
-<<<<<<< HEAD
     // 1. 更新 user 表中的基础信息（昵称 / 邮箱）
     const updateData = {};
     if (user_name) updateData.user_name = user_name.trim();
@@ -111,15 +102,6 @@ const updateUserProfile = async (req, res) => {
         );
       }
     }
-=======
-    // 更新用户信息
-    const updateData = {};
-    if (user_name) updateData.user_name = user_name.trim();
-    if (email) updateData.email = email;
-    if (user_intro !== undefined) updateData.user_intro = user_intro || '';
-
-    await UserModel.updateProfile(userId, updateData);
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 
     res.json({ success: true, message: '用户信息更新成功' });
 
