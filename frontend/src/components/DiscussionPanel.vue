@@ -319,8 +319,12 @@ export default {
         await postComment({
           videoId: props.videoId,
           content: replyContent.value.trim(),
+<<<<<<< HEAD
           parentId: parentCommentId,
           userId: currentUserId.value
+=======
+          parentId: parentCommentId, // 
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
         });
         
         replyContent.value = "";

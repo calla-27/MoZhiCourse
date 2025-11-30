@@ -4,7 +4,11 @@ import CourseVideo from '../views/CourseVideo.vue'
 import CourseDetail from '../views/CourseDetail.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
+<<<<<<< HEAD
 import Home from '@/views/Home.vue' 
+=======
+import SearchResults from '../views/SearchResults.vue'
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 import Community from '../views/Community.vue'
 import StudentCenter from '../views/StudentCenter.vue'
 import TeacherCenter from '../views/TeacherCenter.vue'
@@ -55,6 +59,17 @@ const routes = [
     path: '/personal/teacher',
     name: 'TeacherCenter',
     component: TeacherCenter
+<<<<<<< HEAD
+=======
+  },
+  {
+    path: '/',
+    redirect: to => {
+      // 如果已登录，跳转到搜索页；否则跳转到登录页
+      const token = localStorage.getItem('token')
+      return token ? '/search' : '/login'
+    }
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
   }
 ]
 

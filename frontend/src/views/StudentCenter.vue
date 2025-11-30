@@ -14,7 +14,11 @@
         <div class="profile-info">
           <h1>
             {{ user.userName || '未设置用户名' }}
+<<<<<<< HEAD
             <i class="fas fa-edit edit-icon" @click="editName"></i>
+=======
+            <i class="fas fa-edit edit-icon" @click="showName=true"></i>
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
           </h1>
           <p>{{ user.occupation || '持续学习者' }}</p>
           <div class="profile-bio" @click="startEditBio">
@@ -168,6 +172,7 @@
       </section>
     </div>
   </div>
+<<<<<<< HEAD
   <EditProfileModal
     v-model="showEditProfile"
     :user-name="user.userName"
@@ -175,12 +180,17 @@
     :user-intro="user.userIntro"
     @save="handleSaveProfile"
   />
+=======
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 </template>
 
 <script setup>
 import { onMounted, ref, nextTick } from 'vue'
 import { useUserStore } from '../stores/user.js'
+<<<<<<< HEAD
 import EditProfileModal from '../components/EditProfileModal.vue'
+=======
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 
 /* 用户状态 */
 const user = useUserStore()
@@ -224,6 +234,7 @@ async function saveBio() {
     } catch (error) {
       console.error('更新个性签名失败:', error)
     }
+<<<<<<< HEAD
 
   async function editName() {
     const current = user.userName || ''
@@ -236,6 +247,8 @@ async function saveBio() {
       window.alert(e.message || '更新昵称失败，请重试')
     }
   }
+=======
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
   }
   editingBio.value = false
 }

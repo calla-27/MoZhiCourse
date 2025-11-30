@@ -25,9 +25,15 @@
           </div>
         </div>
 
+<<<<<<< HEAD:frontend/src/components/layout/HomeView.vue
         <!-- 下方精选课程卡片区域 -->
         <div class="featured-section">
           <h2 class="section-title">精品课程</h2>
+=======
+        <!-- 中间静态精选卡片区域（你给出的 5 门课程） -->
+        <div class="featured-section">
+          <h2 class="section-title">精选课程</h2>
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba:frontend/src/views/SearchResults.vue
           <div class="courses-grid">
             <CourseCard 
               v-for="course in featuredCourses" 
@@ -37,7 +43,11 @@
           </div>
         </div>
 
+<<<<<<< HEAD:frontend/src/components/layout/HomeView.vue
         <!-- 下方全部推荐课程列表 -->
+=======
+        <!-- 下方全部推荐课程列表（后端数据） -->
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba:frontend/src/views/SearchResults.vue
         <div v-if="recommendedCourses.length > 0" class="all-courses-section">
           <h2 class="section-title">全部推荐课程</h2>
           <div class="courses-grid">
@@ -115,9 +125,137 @@
 </template>
 
 <script setup>
+<<<<<<< HEAD:frontend/src/components/layout/HomeView.vue
 import CourseCard from '@/components/course/CourseCard.vue'
 import CourseCarousel from '@/components/course/CourseCarousel.vue'
 import Footer from '@/components/layout/Footer.vue'
+=======
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import Footer from '@/components/layout/Footer.vue'
+import CourseCard from '@/components/course/CourseCard.vue'
+import { searchCourses, getAllCourses } from '@/api/courseVideo'
+
+const route = useRoute()
+const router = useRouter()
+
+const searchQuery = ref('')
+const searchResults = ref([])
+const isLoading = ref(false)
+const hasSearched = ref(false)
+const sortBy = ref('relevance')
+
+// 热门搜索标签
+const popularTags = ref([
+  'Python', '机器学习', '前端开发', '数据分析', 
+  'Linux', '系统管理', 'Ubuntu', '人工智能'
+])
+
+// 精选课程数据（从后端动态获取）
+const featuredCourses = ref([])
+
+// 推荐课程数据（从后端加载）
+const recommendedCourses = ref([])
+
+// 计算排序后的结果
+const sortedResults = computed(() => {
+  const results = [...searchResults.value]
+  switch (sortBy.value) {
+    case 'rating':
+      return results.sort((a, b) => b.rating - a.rating)
+    case 'students':
+      return results.sort((a, b) => parseInt(b.students) - parseInt(a.students))
+    case 'newest':
+      return results.sort((a, b) => b.id - a.id)
+    default:
+      return results
+  }
+})
+
+// 将后端数据转换为前端格式
+const transformCourseData = (course) => {
+  return {
+    id: course.course_id,
+    title: course.course_name,
+    description: course.course_desc,
+    instructor: course.teacher_name || '未知讲师',
+    students: course.student_count ? `${course.student_count}` : '0',
+    rating: 4.5,
+    difficulty: course.difficulty_level || '初级',
+    // 这里必须返回合法的 CSS background 值
+    image: course.cover_img 
+      ? (course.cover_img.startsWith('http')
+          ? `url(${course.cover_img})`
+          : `url(http://localhost:4000${course.cover_img})`)
+      : 'linear-gradient(135deg, #667eea, #764ba2)'
+  }
+}
+
+// 执行搜索
+const performSearch = async () => {
+  if (!searchQuery.value.trim()) return
+
+  isLoading.value = true
+  hasSearched.value = true
+
+  try {
+    const res = await searchCourses(searchQuery.value.trim())
+    console.log('🔍 搜索接口返回:', res)
+
+    // request.js 已把 axios 的 response.data 解包，这里的 res 就是 { code, message, data }
+    const courses = res.data || []
+    console.log('📚 课程数组:', courses)
+
+    searchResults.value = courses.map(transformCourseData)
+
+    if (searchResults.value.length > 0) {
+      const allRes = await getAllCourses()
+      const allCourses = allRes.data || []
+      recommendedCourses.value = allCourses
+        .filter(c => !searchResults.value.some(sc => sc.id === c.course_id))
+        .slice(0, 4)
+        .map(transformCourseData)
+    }
+  } catch (error) {
+    console.error('❌ 搜索课程失败:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 通过标签搜索
+const searchByTag = (tag) => {
+  searchQuery.value = tag
+  performSearch()
+}
+
+// 清空搜索
+const clearSearch = () => {
+  searchQuery.value = ''
+  searchResults.value = []
+  hasSearched.value = false
+  loadAllCourses()
+}
+
+// 加载所有课程（首页显示）
+const loadAllCourses = async () => {
+  isLoading.value = true
+  try {
+    const res = await getAllCourses()
+    const courses = res.data || []
+    
+    // 精选课程取前5个
+    featuredCourses.value = courses.slice(0, 5).map(transformCourseData)
+    
+    // 推荐课程取剩余的课程
+    recommendedCourses.value = courses.slice(5, 13).map(transformCourseData)
+  } catch (error) {
+    console.error('❌ 加载课程失败:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba:frontend/src/views/SearchResults.vue
 
 defineProps({
   searchQuery: String,
@@ -131,6 +269,7 @@ defineProps({
   sortedResults: Array
 })
 
+<<<<<<< HEAD:frontend/src/components/layout/HomeView.vue
 defineEmits(['update:sort-by', 'search-by-tag', 'clear-search', 'perform-search'])
 </script>
 
@@ -146,6 +285,24 @@ defineEmits(['update:sort-by', 'search-by-tag', 'clear-search', 'perform-search'
   padding: 0 20px;
 }
 
+=======
+// 监听路由参数中的 q 变化（来自全局导航搜索）
+watch(
+  () => route.query.q,
+  (newQ) => {
+    if (typeof newQ === 'string' && newQ.trim()) {
+      searchQuery.value = newQ.trim()
+      performSearch()
+    } else if (!newQ) {
+      // 清空搜索时，恢复默认课程列表
+      clearSearch()
+    }
+  }
+)
+</script>
+
+<style scoped>
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba:frontend/src/views/SearchResults.vue
 /* 顶部搜索结果信息条 */
 .search-meta {
   padding-top: 20px;

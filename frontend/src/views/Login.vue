@@ -136,8 +136,12 @@ const handleLogin = async () => {
 
     console.log('登录成功，收到的 token:', token)
 
+<<<<<<< HEAD
     // 登录成功后：如果有 redirect 参数优先跳转，没有则回到首页
     const redirect = route.query.redirect || '/'
+=======
+    const redirect = route.query.redirect || '/search'
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     console.log('准备跳转到:', redirect)
     router.push(redirect)
   } catch (e) {
@@ -164,8 +168,12 @@ const handleRegister = async () => {
 
     console.log('注册成功，收到的 token:', token)
 
+<<<<<<< HEAD
     // 注册成功后：如果有 redirect 参数优先跳转，没有则回到首页
     const redirect = route.query.redirect || '/'
+=======
+    const redirect = route.query.redirect || '/search'
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     console.log('注册后准备跳转到:', redirect)
     router.push(redirect)
   } catch (e) {

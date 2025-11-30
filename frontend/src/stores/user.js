@@ -142,6 +142,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+<<<<<<< HEAD
     // 更新邮箱
     async updateEmail(newEmail) {
       try {
@@ -169,6 +170,9 @@ export const useUserStore = defineStore('user', {
     },
 
     // 更新头像（由 AvatarModal 上传成功后回调）
+=======
+    // 更新头像
+>>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     async updateAvatar(avatarUrl) {
       this.avatarUrl = avatarUrl
     },
