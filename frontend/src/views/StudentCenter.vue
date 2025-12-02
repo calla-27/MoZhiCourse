@@ -1,10 +1,25 @@
 <template>
   <div class="student-center">
+    <!-- 头像弹窗 -->
+    <AvatarModal v-model="showAvatar" @avatar-updated="handleAvatarUpdate" />
+    <!-- 设置弹窗 -->
+    <SettingsModal v-model="showSettings" />
+    <!-- 个人资料编辑弹窗 -->
+    <EditProfileModal 
+      v-model="showEditProfile"
+      :user-name="user.userName"
+      :email="user.email"
+      :user-intro="user.userIntro"
+      @save="handleProfileUpdate"
+    />
     <!-- 个人头部 -->
     <div class="container">
       <div class="profile-header">
         <button class="settings-btn" title="账户设置" @click="showSettings=true">
           <i class="fas fa-cog"></i>
+        </button>
+        <button class="edit-profile-btn" title="编辑个人资料" @click="showEditProfile=true">
+          <i class="fas fa-user-edit"></i>
         </button>
         <div class="profile-avatar" @click="showAvatar=true">
           <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.userName"/>
@@ -12,25 +27,10 @@
           <div class="avatar-edit-overlay"><i class="fas fa-camera"></i></div>
         </div>
         <div class="profile-info">
-          <h1>
-            {{ user.userName || '未设置用户名' }}
-<<<<<<< HEAD
-            <i class="fas fa-edit edit-icon" @click="editName"></i>
-=======
-            <i class="fas fa-edit edit-icon" @click="showName=true"></i>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
-          </h1>
+          <h1>{{ user.userName || '未设置用户名' }}</h1>
           <p>{{ user.occupation || '持续学习者' }}</p>
-          <div class="profile-bio" @click="startEditBio">
-            <template v-if="!editingBio">{{ user.userIntro || '这个人很懒，什么都没有写～' }}</template>
-            <textarea 
-              v-else 
-              v-model="draftBio" 
-              @blur="saveBio" 
-              @keydown.enter.prevent="saveBio"
-              :placeholder="user.userIntro"
-              ref="bioTextarea"
-            ></textarea>
+          <div class="profile-bio">
+            {{ user.userIntro || '这个人很懒，什么都没有写～' }}
           </div>
           <div class="profile-stats">
             <div class="stat-item">
@@ -71,7 +71,13 @@
       <!-- 下方内容：点谁显谁 -->
       <!-- 1. 学情分析 -->
       <section v-if="activeTab === 'analysis'" class="content-section">
-        <h2 class="section-title">学情分析 <button class="more-btn">更多分析 <i class="fas fa-chevron-right"></i></button></h2>
+        <h2 class="section-title">
+          学情分析
+          <button @click="goToBehaviorAnalysis" class="btn btn-link">
+            查看更多 <i class="fas fa-arrow-right"></i>
+          </button>
+        </h2>
+        
         <div class="stats-grid">
           <div class="stat-card"><div class="value">{{ user.learningStats?.total_learning_hours || 0 }}h</div><div class="label">总学习时长</div></div>
           <div class="stat-card"><div class="value">{{ user.learningStats?.courses_completed || 0 }}</div><div class="label">已学课程</div></div>
@@ -80,24 +86,30 @@
         </div>
       </section>
 
-      <!-- 2. 正在学习 -->
-      <section v-if="activeTab === 'learning'" class="content-section">
-        <h2 class="section-title">正在学习的课程 <button class="more-btn">查看全部 <i class="fas fa-chevron-right"></i></button></h2>
+      <!-- 2. 我的学习库 -->
+      <section v-if="activeTab === 'library'" class="content-section">
+        <h2 class="section-title">我的学习库 <button class="more-btn">查看全部 <i class="fas fa-chevron-right"></i></button></h2>
         <div class="courses-grid">
-          <div v-for="course in learningList" :key="course.id" class="course-card">
-            <div class="course-image" :style="{background: course.bg || 'linear-gradient(135deg,#667eea,#764ba2)'}"></div>
+          <div v-for="course in libraryList" :key="course.id" class="course-card">
+            <div class="course-image" :style="{background: course.bg || 'linear-gradient(135deg,#a8edea,#fed6e3)'}"></div>
             <div class="course-content">
               <h3 class="course-title">{{ course.title || course.name }}</h3>
               <p>{{ course.desc || course.description }}</p>
-              <div class="course-progress">
+              <div class="course-meta">添加于 {{ course.add_time || course.date }}</div>
+              <div class="course-progress" v-if="course.progress > 0">
                 <div class="progress-bar"><div class="progress-fill" :style="{width: (course.progress || 0)+'%'}"></div></div>
                 <div class="progress-text">{{ course.progress || 0 }}% 已完成</div>
               </div>
+              <div class="course-actions">
+                <button class="action-btn primary" @click="goToCourse(course.id)">开始学习</button>
+                <button class="action-btn outline" @click="removeFromLibrary(course.id)">移除</button>
+              </div>
             </div>
           </div>
-          <div v-if="learningList.length === 0" class="empty-state">
-            <i class="fas fa-book-open"></i>
-            <p>还没有开始学习任何课程</p>
+          <div v-if="libraryList.length === 0" class="empty-state">
+            <i class="fas fa-bookmark"></i>
+            <p>学习库空空如也</p>
+            <p class="empty-hint">将感兴趣的课程添加到学习库，随时随地开始学习</p>
             <button class="browse-btn" @click="$router.push('/search')">浏览课程</button>
           </div>
         </div>
@@ -113,6 +125,10 @@
               <h3 class="course-title">{{ course.title || course.name }}</h3>
               <p>{{ course.desc || course.description }}</p>
               <div class="course-meta">收藏于 {{ course.collect_time || course.date }}</div>
+              <div class="course-actions">
+                <button class="action-btn primary" @click="goToCourse(course.id)">查看课程</button>
+                <button class="action-btn outline" @click="removeFromFavorites(course.id)">取消收藏</button>
+              </div>
             </div>
           </div>
           <div v-if="collectList.length === 0" class="empty-state">
@@ -172,40 +188,29 @@
       </section>
     </div>
   </div>
-<<<<<<< HEAD
-  <EditProfileModal
-    v-model="showEditProfile"
-    :user-name="user.userName"
-    :email="user.email"
-    :user-intro="user.userIntro"
-    @save="handleSaveProfile"
-  />
-=======
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 </template>
 
 <script setup>
 import { onMounted, ref, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user.js'
-<<<<<<< HEAD
+import AvatarModal from '../components/AvatarModal.vue'
+import SettingsModal from '../components/SettingsModal.vue'
 import EditProfileModal from '../components/EditProfileModal.vue'
-=======
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
+
+const router = useRouter()
 
 /* 用户状态 */
 const user = useUserStore()
-const editingBio = ref(false)
-const draftBio = ref('')
 const showAvatar = ref(false)
-const showName = ref(false)
 const showSettings = ref(false)
-const bioTextarea = ref()
+const showEditProfile = ref(false)
 
 /* 标签数据 */
 const activeTab = ref('analysis')
 const tabs = [
   { key: 'analysis', label: '学情分析' },
-  { key: 'learning', label: '正在学习' },
+  { key: 'library', label: '我的学习库' },
   { key: 'collect', label: '我的收藏' },
   { key: 'community', label: '我的社区' },
   { key: 'achievement', label: '我的成就' }
@@ -215,42 +220,231 @@ const tabs = [
 const stats = ref({})
 const learningList = ref([])
 const collectList = ref([])
+const libraryList = ref([]) // 新增：学习库列表
 const communityData = ref({})
 const achievements = ref([])
 
 /* 方法 */
-function startEditBio() {
-  draftBio.value = user.userIntro
-  editingBio.value = true
-  nextTick(() => {
-    bioTextarea.value && bioTextarea.value.focus()
-  })
+
+// 跳转到课程
+const goToCourse = (courseId) => {
+  router.push(`/course/${courseId}`)
 }
 
-async function saveBio() {
-  if (draftBio.value.trim() && draftBio.value !== user.userIntro) {
-    try {
-      await user.updateBio(draftBio.value)
-    } catch (error) {
-      console.error('更新个性签名失败:', error)
-    }
-<<<<<<< HEAD
+const goToBehaviorAnalysis = () => {
+  router.push('/personal/learning-analysis/behavior')
+}
 
-  async function editName() {
-    const current = user.userName || ''
-    const newName = window.prompt('请输入新的昵称', current)
-    if (!newName || newName === current) return
-    try {
-      await user.updateName(newName)
-    } catch (e) {
-      console.error('更新昵称失败:', e)
-      window.alert(e.message || '更新昵称失败，请重试')
+// 从学习库移除
+const removeFromLibrary = async (courseId) => {
+  if (!confirm('确定要从学习库中移除该课程吗？这将取消报名。')) return
+  
+  try {
+    const token = localStorage.getItem('token')
+    const API_BASE = 'http://localhost:4000'
+    
+    console.log(`🗑️ 移除课程 ${courseId}，调用接口: ${API_BASE}/api/personal/library/${courseId}/toggle`)
+    
+    const res = await fetch(`${API_BASE}/api/personal/library/${courseId}/toggle`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    const data = await res.json()
+    
+    console.log('📦 移除响应:', data)
+    
+    if (data.success) {
+      alert(data.message || '已从学习库中移除')
+      loadLibraryCourses() // 重新加载学习库
+    } else {
+      throw new Error(data.message || '移除失败')
+    }
+  } catch (error) {
+    console.error('从学习库移除失败:', error)
+    alert('移除失败：' + error.message)
+  }
+}
+
+// 从收藏中移除
+const removeFromFavorites = async (courseId) => {
+  if (!confirm('确定要取消收藏该课程吗？')) return
+  
+  try {
+    const token = localStorage.getItem('token')
+    const API_BASE = 'http://localhost:4000'
+    
+    const res = await fetch(`${API_BASE}/api/personal/favorites/${courseId}/toggle`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    const data = await res.json()
+    
+    if (data.success) {
+      alert('已取消收藏')
+      loadCollectCourses() // 重新加载收藏列表
+    } else {
+      throw new Error(data.message || '取消收藏失败')
+    }
+  } catch (error) {
+    console.error('取消收藏失败:', error)
+    alert('取消收藏失败：' + error.message)
+  }
+}
+
+// 加载学习库课程
+const loadLibraryCourses = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      libraryList.value = []
+      return
+    }
+    
+    const API_BASE = 'http://localhost:4000'
+    
+    console.log('📚 加载学习库课程，调用接口:', `${API_BASE}/api/personal/library`)
+    
+    const res = await fetch(`${API_BASE}/api/personal/library`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    const data = await res.json()
+    
+    console.log('📦 学习库响应数据:', data)
+    
+    if (data.success) {
+      libraryList.value = data.data.map(course => ({
+        id: course.course_id,
+        title: course.course_name,
+        description: course.course_desc,
+        progress: course.progress || 0,
+        add_time: course.enroll_time ? new Date(course.enroll_time).toLocaleDateString() : '未知时间',
+        // 处理封面图片
+        bg: course.cover_img 
+          ? (course.cover_img.startsWith('http')
+              ? `url(${course.cover_img})`
+              : `url(${API_BASE}${course.cover_img})`)
+          : 'linear-gradient(135deg, #a8edea, #fed6e3)'
+      }))
+      console.log(`✅ 加载到 ${libraryList.value.length} 门课程`)
+    } else {
+      console.warn('获取学习库课程失败:', data.message)
+      libraryList.value = []
+    }
+  } catch (error) {
+    console.error('❌ 加载学习库课程失败:', error)
+    libraryList.value = []
+  }
+}
+
+// 加载收藏课程
+const loadCollectCourses = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      collectList.value = []
+      return
+    }
+    
+    const API_BASE = 'http://localhost:4000'
+    
+    console.log('❤️ 加载收藏课程，调用接口:', `${API_BASE}/api/personal/favorites`)
+    
+    const res = await fetch(`${API_BASE}/api/personal/favorites`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    // 检查响应状态
+    if (!res.ok) {
+      console.error(`❌ 收藏接口返回错误状态: ${res.status} ${res.statusText}`)
+      collectList.value = []
+      return
+    }
+    
+    const data = await res.json()
+    
+    console.log('📦 收藏接口响应数据:', data)
+    console.log('📦 响应数据结构检查:');
+    console.log('- data.success:', data.success);
+    console.log('- data.data 类型:', typeof data.data);
+    console.log('- data.data 值:', data.data);
+    
+    if (data.success) {
+      // 确保 data.data 是数组
+      const courses = Array.isArray(data.data) ? data.data : []
+      console.log(`✅ 找到 ${courses.length} 门收藏课程`)
+      
+      // 调试：查看第一门课程的字段
+      if (courses.length > 0) {
+        console.log('📋 第一门课程字段:', Object.keys(courses[0]))
+        console.log('📋 第一门课程详情:', courses[0])
+      }
+      
+      collectList.value = courses.map(course => {
+        // 提取课程信息，处理可能的字段名不同情况
+        const courseInfo = {
+          id: course.course_id || course.id,
+          title: course.course_name || course.title || '未命名课程',
+          description: course.course_desc || course.description || course.course_desc || '暂无描述',
+          progress: course.progress || 0,
+          collect_time: course.enroll_time 
+            ? new Date(course.enroll_time).toLocaleDateString()
+            : (course.updated_at 
+                ? new Date(course.updated_at).toLocaleDateString()
+                : '未知时间'),
+          // 处理封面图片
+          bg: getCourseCover(course)
+        }
+        
+        console.log('📝 课程信息处理结果:', courseInfo)
+        return courseInfo
+      })
+      
+      console.log(`✅ 成功加载 ${collectList.value.length} 门收藏课程到界面`)
+    } else {
+      console.warn('获取收藏课程失败:', data.message)
+      collectList.value = []
+    }
+  } catch (error) {
+    console.error('❌ 加载收藏课程失败:', error)
+    collectList.value = []
+  }
+}
+
+// 辅助函数：获取课程封面
+const getCourseCover = (course) => {
+  const API_BASE = 'http://localhost:4000'
+  
+  // 尝试多种可能的封面字段
+  let coverImg = course.cover_img || course.image || course.bg_image
+  
+  if (coverImg) {
+    // 处理相对路径和绝对路径
+    if (coverImg.startsWith('http')) {
+      return `url(${coverImg})`
+    } else if (coverImg.startsWith('/')) {
+      return `url(${API_BASE}${coverImg})`
+    } else {
+      return `url(${API_BASE}/uploads/${coverImg})`
     }
   }
-=======
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
-  }
-  editingBio.value = false
+  
+  // 使用默认渐变背景
+  return 'linear-gradient(135deg,#ffecd2,#fcb69f)'
 }
 
 onMounted(async () => {
@@ -275,57 +469,47 @@ onMounted(async () => {
     await user.fetchLearningStats()
     console.log('✅ 学习统计获取完成:', user.learningStats)
     
-    // 模拟加载其他数据
-    learningList.value = [
-      {
-        id: 1,
-        title: 'Vue.js 3.0 完整教程',
-        description: '从零开始学习Vue.js 3.0的核心概念和实战应用',
-        progress: 65,
-        bg: 'linear-gradient(135deg,#667eea,#764ba2)'
-      },
-      {
-        id: 2,
-        title: 'JavaScript ES6+ 高级特性',
-        description: '深入理解现代JavaScript的高级特性和最佳实践',
-        progress: 40,
-        bg: 'linear-gradient(135deg,#f093fb,#f5576c)'
-      }
-    ]
+    // 加载学习库课程
+    console.log('📚 加载学习库课程...')
+    await loadLibraryCourses()
     
-    collectList.value = [
-      {
-        id: 1,
-        title: 'React Hooks 深度解析',
-        description: '全面掌握React Hooks的使用技巧',
-        collect_time: '2024-01-15'
-      }
-    ]
-    
-    achievements.value = [
-      {
-        id: 1,
-        title: '初学者',
-        description: '完成第一门课程学习',
-        icon: 'fas fa-star'
-      },
-      {
-        id: 2,
-        title: '坚持者',
-        description: '连续学习7天',
-        icon: 'fas fa-fire'
-      }
-    ]
+    // 加载收藏课程
+    console.log('❤️ 加载收藏课程...')
+    await loadCollectCourses()
     
     console.log('✅ 学生数据加载完成')
+    
+    // 调试信息：检查本地存储
+    console.log('🔍 调试信息:');
+    console.log('- 用户ID:', user.userId);
+    console.log('- 用户Token:', localStorage.getItem('token') ? '存在' : '不存在');
+    console.log('- 学习库课程数:', libraryList.value.length);
+    console.log('- 收藏课程数:', collectList.value.length);
+    
   } catch (error) {
     console.error('❌ 加载学生数据失败:', error)
     // 设置默认数据避免页面空白
     learningList.value = []
     collectList.value = []
+    libraryList.value = []
     achievements.value = []
   }
 })
+
+// 头像更新处理
+const handleAvatarUpdate = (avatarUrl) => {
+  user.updateAvatar(avatarUrl)
+}
+
+// 个人资料更新处理
+const handleProfileUpdate = async (profileData) => {
+  try {
+    await user.updateProfile(profileData)
+    alert('个人资料更新成功')
+  } catch (error) {
+    alert('更新个人资料失败：' + error.message)
+  }
+}
 </script>
 
 <style src="../assets/student.css"></style>

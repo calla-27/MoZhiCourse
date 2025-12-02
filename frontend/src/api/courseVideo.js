@@ -22,12 +22,65 @@ export const getCourseStats = (courseId) => {
 }
 
 // 课程收藏相关
-export const getCourseFavoriteStatus = (courseId) => {
-  return request.get(`/courses/${courseId}/favorite`)
+export const getCourseFavoriteStatus = async (courseId) => {
+  try {
+    console.log(`🔍 获取课程 ${courseId} 收藏状态`)
+    
+    const token = localStorage.getItem('token')
+    if (!token) {
+      return { success: false, data: { isFavorite: false }, message: '未登录' }
+    }
+    
+    // 直接调用个人中心的收藏状态接口
+    const response = await axios.get(`/personal/library/${courseId}/status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    console.log('收藏状态响应:', response.data)
+    return {
+      success: response.data.success,
+      data: {
+        isFavorite: response.data.data?.is_enrolled || false
+      }
+    }
+  } catch (error) {
+    console.error('获取收藏状态失败:', error)
+    return { success: false, data: { isFavorite: false } }
+  }
 }
 
-export const toggleCourseFavorite = (courseId, isFavorite) => {
-  return request.post(`/courses/${courseId}/favorite`, { isFavorite })
+export const toggleCourseFavorite = async (courseId, isFavorite = null) => {
+  try {
+    console.log(`❤️ 切换课程 ${courseId} 收藏状态`)
+    
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('未登录')
+    }
+    
+    // 直接调用个人中心的收藏切换接口
+    const response = await axios.post(`/personal/favorites/${courseId}/toggle`, 
+      { isFavorite },
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+    
+    console.log('收藏切换响应:', response.data)
+    return {
+      success: response.data.success,
+      data: {
+        isFavorite: response.data.data?.is_favorite
+      },
+      message: response.data.message
+    }
+  } catch (error) {
+    console.error('切换收藏状态失败:', error)
+    throw error
+  }
 }
 
 // 获取课程评价列表

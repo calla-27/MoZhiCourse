@@ -26,10 +26,17 @@
             </div>
           </div>
           <div class="course-actions">
-            <button class="btn btn-primary" @click="$emit('go-to-first-video')">
-              <i class="fas fa-play"></i>
-              开始学习
+            <!-- 修改：移除原来的两个按钮，改为单个报名/开始学习按钮 -->
+            <button 
+              class="btn btn-primary" 
+              @click="$emit('enroll-course')"
+              :disabled="isTogglingLibrary"
+            >
+              <i :class="isEnrolled ? 'fas fa-play' : 'fas fa-pen-alt'"></i>
+              {{ isTogglingLibrary ? '处理中...' : (isEnrolled ? '开始学习' : '立即报名') }}
             </button>
+            
+            <!-- 修改：保留收藏按钮 -->
             <button 
               class="btn btn-secondary" 
               :class="{ 'btn-secondary-active': isFavorite }" 
@@ -116,37 +123,68 @@
         </div>
       </div>
 
-      <!-- 课程大纲 -->
+      <!-- 课程大纲（已报名才能查看） -->
       <div v-if="activeTab === 'curriculum'" class="tab-content">
         <div class="content-section">
           <h2 class="section-title">课程大纲</h2>
-          <div class="curriculum-content">
-            <div 
-              v-for="chapter in chapters" 
-              :key="chapter.id"
-              class="chapter" 
-              :class="{ active: chapter.isOpen }"
-            >
-              <div class="chapter-header" @click="$emit('toggle-chapter', chapter.id)">
-                <div class="chapter-title">
-                  <i :class="chapter.isOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"></i>
-                  <span>{{ chapter.title }}</span>
-                </div>
-                <span>{{ chapter.lessonCount }}个视频</span>
-              </div>
-              <div class="chapter-content">
-                <div 
-                  v-for="lesson in chapter.lessons" 
-                  :key="lesson.id"
-                  class="lesson lesson-clickable"
-                  @click="$emit('go-to-video', lesson.id)"
-                >
-                  <div class="lesson-icon">
-                    <i class="fas fa-play-circle"></i>
+          
+          <!-- 调试信息：显示当前状态 -->
+          <div style="background: #f0f0f0; padding: 10px; margin-bottom: 15px; border-radius: 5px; font-size: 12px;">
+            <div>调试信息：</div>
+            <div>isEnrolled: {{ isEnrolled }}</div>
+            <div>chapters 长度: {{ chapters?.length || 0 }}</div>
+            <div>activeTab: {{ activeTab }}</div>
+          </div>
+          
+          <div v-if="!isEnrolled" class="locked-content">
+            <div class="locked-icon">
+              <i class="fas fa-lock"></i>
+            </div>
+            <h3>课程内容已锁定</h3>
+            <p>请先报名课程以查看所有章节和视频内容</p>
+            <button class="btn-enroll-locked" @click="$emit('enroll-course')">
+              <i class="fas fa-pen-alt"></i>
+              立即报名
+            </button>
+          </div>
+          
+          <div v-else class="curriculum-content">
+            <!-- 如果没有章节数据，显示提示 -->
+            <div v-if="!chapters || chapters.length === 0" class="no-chapters">
+              <i class="fas fa-book-open"></i>
+              <h3>暂无课程大纲</h3>
+              <p>课程大纲正在准备中，请稍后再来查看</p>
+            </div>
+            
+            <!-- 有章节数据时才显示 -->
+            <div v-else>
+              <div 
+                v-for="chapter in chapters" 
+                :key="chapter.id"
+                class="chapter" 
+                :class="{ active: chapter.isOpen }"
+              >
+                <div class="chapter-header" @click="$emit('toggle-chapter', chapter.id)">
+                  <div class="chapter-title">
+                    <i :class="chapter.isOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"></i>
+                    <span>{{ chapter.title }}</span>
                   </div>
-                  <div class="lesson-info">
-                    <div class="lesson-title">{{ lesson.title }}</div>
-                    <div class="lesson-meta">{{ lesson.duration }}分钟</div>
+                  <span>{{ chapter.lessonCount }}个视频</span>
+                </div>
+                <div class="chapter-content">
+                  <div 
+                    v-for="lesson in chapter.lessons" 
+                    :key="lesson.id"
+                    class="lesson lesson-clickable"
+                    @click="$emit('go-to-video', lesson.id)"
+                  >
+                    <div class="lesson-icon">
+                      <i class="fas fa-play-circle"></i>
+                    </div>
+                    <div class="lesson-info">
+                      <div class="lesson-title">{{ lesson.title }}</div>
+                      <div class="lesson-meta">{{ lesson.duration }}分钟</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -278,6 +316,8 @@ defineProps({
   courseFeatures: Array,
   activeTab: String,
   isFavorite: Boolean,
+  isEnrolled: Boolean,  // 修改：将 isInLearningLibrary 改为 isEnrolled
+  isTogglingLibrary: Boolean,
   newRating: Number,
   newReviewContent: String,
   isSubmitting: Boolean
@@ -288,6 +328,7 @@ defineEmits([
   'toggle-chapter', 
   'go-to-first-video',
   'go-to-video',
+  'enroll-course',  // 修改：添加 enroll-course 事件
   'toggle-favorite',
   'update:new-rating',
   'update:new-review-content',
@@ -358,6 +399,7 @@ const tabs = [
 .course-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -370,6 +412,12 @@ const tabs = [
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -377,8 +425,35 @@ const tabs = [
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #0d5bb9;
+}
+
+.btn-preview {
+  background: #34a853;
+  color: white;
+}
+
+.btn-preview:hover:not(:disabled) {
+  background: #2d9249;
+}
+
+.btn-library {
+  background: #fbbc04;
+  color: white;
+}
+
+.btn-library:hover:not(:disabled) {
+  background: #e0a800;
+}
+
+.btn-library-added {
+  background: #0b8043;
+  color: white;
+}
+
+.btn-library-added:hover:not(:disabled) {
+  background: #0a6d39;
 }
 
 .btn-secondary {
@@ -387,7 +462,7 @@ const tabs = [
   border: 1px solid rgba(255,255,255,0.3);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: rgba(255,255,255,0.3);
 }
 
@@ -581,6 +656,32 @@ const tabs = [
 .lesson-meta {
   font-size: 0.8rem;
   color: #5f6368;
+}
+
+/* 无章节数据提示样式 */
+.no-chapters {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #dadce0;
+}
+
+.no-chapters i {
+  font-size: 3rem;
+  color: #dadce0;
+  margin-bottom: 15px;
+}
+
+.no-chapters h3 {
+  font-size: 1.2rem;
+  color: #202124;
+  margin-bottom: 8px;
+}
+
+.no-chapters p {
+  color: #5f6368;
+  margin-bottom: 20px;
 }
 
 /* 讲师信息样式 */
@@ -803,6 +904,82 @@ const tabs = [
   padding: 0 20px;
 }
 
+/* 报名提示区域样式 */
+.enroll-hint,
+.enroll-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.enroll-hint {
+  background: rgba(255, 245, 204, 0.3);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.enroll-hint i {
+  color: #ffc107;
+}
+
+.enroll-success {
+  background: rgba(52, 168, 83, 0.1);
+  color: #34a853;
+  border: 1px solid rgba(52, 168, 83, 0.3);
+}
+
+.enroll-success i {
+  color: #34a853;
+}
+
+/* 课程大纲锁定状态样式 */
+.locked-content {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #dadce0;
+}
+
+.locked-icon {
+  font-size: 3rem;
+  color: #dadce0;
+  margin-bottom: 15px;
+}
+
+.locked-content h3 {
+  font-size: 1.2rem;
+  color: #202124;
+  margin-bottom: 8px;
+}
+
+.locked-content p {
+  color: #5f6368;
+  margin-bottom: 20px;
+}
+
+.btn-enroll-locked {
+  background: #1a73e8;
+  color: white;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-enroll-locked:hover {
+  background: #0d5bb9;
+}
+
 @media (max-width: 768px) {
   .course-meta {
     gap: 15px;
@@ -810,6 +987,11 @@ const tabs = [
   
   .course-actions {
     flex-direction: column;
+  }
+  
+  .course-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
   
   .features-grid {

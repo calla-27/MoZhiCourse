@@ -15,6 +15,57 @@ export const apiStats = async () => {
   }
 };
 
+// 在学生API中添加以下代码
+
+// 学习库相关API
+export const apiLearningLibrary = {
+  // 获取学习库课程
+  getLearningLibrary: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/personal/library`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('获取学习库课程失败:', error);
+      return { success: false, data: [] };
+    }
+  },
+
+  // 添加到学习库/从学习库移除
+  toggleLibrary: async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/personal/library/${courseId}/toggle`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('操作学习库失败:', error);
+      return { success: false, message: '操作失败' };
+    }
+  },
+
+  // 检查课程是否在学习库中
+  checkLibraryStatus: async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/personal/library/${courseId}/status`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('检查学习库状态失败:', error);
+      return { success: false, data: { isInLibrary: false } };
+    }
+  }
+};
+
 // 获取学生课程
 export const apiStudentCourses = async (type = 'learning') => {
   try {

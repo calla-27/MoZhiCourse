@@ -1,49 +1,22 @@
 <template>
   <div class="course-video-container">
-<<<<<<< HEAD
     <!-- 顶部标题栏 -->
-=======
-    <!-- 顶部导航栏 -->
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     <nav class="top-navbar">
       <div class="nav-left">
         <button class="back-btn" @click="goBack">
           <i class="fas fa-arrow-left"></i>
           <span>返回</span>
         </button>
-<<<<<<< HEAD
-=======
-        <div class="logo">
-          <i class="fas fa-graduation-cap"></i>
-          <span>墨知课堂</span>
-        </div>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
       </div>
       
       <div class="nav-center" v-if="currentCourse.course_name">
         <h2 class="course-title">{{ currentCourse.course_name }}</h2>
         <div class="video-title" v-if="currentVideo.video_title">
           {{ currentVideo.video_title }}
-<<<<<<< HEAD
-=======
-        </div>
-      </div>
-      
-      <div class="nav-right" v-if="userInfo.user_name">
-        <div class="user-info">
-          <span>{{ userInfo.user_name }}</span>
-          <div class="avatar">
-            {{ userInfo.avatar || userInfo.user_name?.charAt(0) }}
-          </div>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
         </div>
       </div>
     </nav>
 
-<<<<<<< HEAD
-=======
-    <!-- 主要内容区域 -->
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     <main class="main-layout">
       <!-- 左侧章节目录 -->
       <aside class="chapter-sidebar" :class="{ collapsed: chapterCollapsed }">
@@ -178,15 +151,6 @@
               <i class="fas fa-robot"></i>
               <span>小墨</span>
             </button>
-<<<<<<< HEAD
-=======
-            <button class="tab-btn" 
-                    :class="{ active: activeRightTab === 'tools' }"
-                    @click="activeRightTab = 'tools'">
-              <i class="fas fa-tools"></i>
-              <span>工具</span>
-            </button>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
           </div>
           <button class="panel-toggle" @click="rightPanelCollapsed = !rightPanelCollapsed">
             <i class="fas" :class="rightPanelCollapsed ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
@@ -202,40 +166,13 @@
                 <DiscussionPanel
                   :video-id="currentVideo.video_id"
                   :discussions="discussions"
-<<<<<<< HEAD
                   :user-info="userInfo"
-=======
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
                   @send-message="handleSendMessage"
                   @discussion-search="handleDiscussionSearch"
                   @like-discussion="handleLikeDiscussion"
                   @reply-discussion="handleReplyDiscussion"
                 />
               </div>
-<<<<<<< HEAD
-=======
-              
-              <!-- 固定的发表评论区域 -->
-              <div class="comment-input-fixed">
-                <div class="comment-input-header">
-                  <h4>发表讨论</h4>
-                </div>
-                <div class="comment-input-form">
-                  <textarea 
-                    v-model="newComment" 
-                    placeholder="说说你的想法..."
-                    class="comment-textarea"
-                    rows="3"
-                  ></textarea>
-                  <div class="comment-actions">
-                    <button class="send-comment-btn" @click="sendComment" :disabled="!newComment.trim()">
-                      <i class="fas fa-paper-plane"></i>
-                      <span>发送</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
             </template>
             <div v-else class="empty-state">
               <i class="fas fa-comments"></i>
@@ -315,74 +252,6 @@
               </div>
             </div>
           </div>
-<<<<<<< HEAD
-=======
-
-          <!-- 学习工具面板 -->
-          <div v-if="activeRightTab === 'tools'" class="tab-pane">
-            <div class="tools-section-panel">
-              <!-- 学习进度 -->
-              <div class="tool-item">
-                <div class="tool-icon">
-                  <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="tool-info">
-                  <h4>学习进度</h4>
-                  <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: '65%' }"></div>
-                  </div>
-                  <span class="progress-text">65% 完成</span>
-                </div>
-              </div>
-
-              <!-- 学习统计 -->
-              <div class="tool-item">
-                <div class="tool-icon">
-                  <i class="fas fa-clock"></i>
-                </div>
-                <div class="tool-info">
-                  <h4>学习时长</h4>
-                  <p class="stat-value">2小时30分钟</p>
-                </div>
-              </div>
-
-              <!-- 知识点 -->
-              <div class="tool-item">
-                <div class="tool-icon">
-                  <i class="fas fa-lightbulb"></i>
-                </div>
-                <div class="tool-info">
-                  <h4>重点知识</h4>
-                  <div class="knowledge-tags">
-                    <span class="tag">变量定义</span>
-                    <span class="tag">数据类型</span>
-                    <span class="tag">循环结构</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 快捷操作 -->
-              <div class="tool-item">
-                <div class="tool-icon">
-                  <i class="fas fa-bookmark"></i>
-                </div>
-                <div class="tool-info">
-                  <h4>快捷操作</h4>
-                  <div class="quick-actions">
-                    <button class="quick-btn">
-                      <i class="fas fa-download"></i>
-                      <span>下载课件</span>
-                    </button>
-                    <button class="quick-btn">
-                      <i class="fas fa-print"></i>
-                      <span>打印笔记</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
         </div>
       </aside>
 
@@ -476,7 +345,6 @@ export default {
     });
     const userInfo = ref({});
     const learningProgress = ref(0);
-    const newComment = ref('');
 
     const fetchUserInfo = async () => {
       try {
@@ -644,37 +512,12 @@ export default {
     const chapterCollapsed = ref(false);
     const rightPanelCollapsed = ref(false);
     const activeRightTab = ref('comments'); // 默认显示评论
-<<<<<<< HEAD
-=======
-    const aiMinimized = ref(false);
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     
     // 播放器控制状态
     const isLiked = ref(false);
     const isCollected = ref(false);
-<<<<<<< HEAD
     const showEpisodeList = ref(false);
     
-=======
-    const danmakuEnabled = ref(true);
-    const subtitleEnabled = ref(false);
-    const showSubtitleMenu = ref(false);
-    const showSpeedMenu = ref(false);
-    const showQualityMenu = ref(false);
-    const showEpisodeList = ref(false);
-    
-    // 播放器设置
-    const playbackSpeed = ref(1.0);
-    const currentQuality = ref('高清');
-    const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-    const qualityOptions = [
-      { label: '超清', value: '1080p' },
-      { label: '高清', value: '720p' },
-      { label: '标清', value: '480p' },
-      { label: '流畅', value: '360p' }
-    ];
-    
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     // 笔记和资料
     const notes = ref([]);
     const courseMaterials = ref([
@@ -694,58 +537,16 @@ export default {
 
     const toggleLike = () => {
       isLiked.value = !isLiked.value;
-<<<<<<< HEAD
-=======
-      // TODO: 调用点赞API
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     };
 
     const toggleCollect = () => {
       isCollected.value = !isCollected.value;
-<<<<<<< HEAD
     };
 
     const shareVideo = () => {
       console.log('分享视频');
     };
 
-=======
-      // TODO: 调用收藏API
-    };
-
-    const shareVideo = () => {
-      // TODO: 实现分享功能
-      console.log('分享视频');
-    };
-
-    const toggleDanmaku = () => {
-      danmakuEnabled.value = !danmakuEnabled.value;
-      // TODO: 控制弹幕显示
-    };
-
-    const toggleSubtitle = () => {
-      showSubtitleMenu.value = !showSubtitleMenu.value;
-    };
-
-    const setSubtitle = (type) => {
-      subtitleEnabled.value = type !== 'off';
-      showSubtitleMenu.value = false;
-      // TODO: 设置字幕
-    };
-
-    const setPlaybackSpeed = (speed) => {
-      playbackSpeed.value = speed;
-      showSpeedMenu.value = false;
-      // TODO: 设置播放速度
-    };
-
-    const setQuality = (quality) => {
-      currentQuality.value = quality.label;
-      showQualityMenu.value = false;
-      // TODO: 设置视频清晰度
-    };
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     const getCurrentEpisodeNumber = () => {
       const allVideos = getAllVideos();
       const currentIndex = allVideos.findIndex(v => v.video_id === currentVideo.value.video_id);
@@ -814,7 +615,6 @@ export default {
     };
 
     const downloadMaterial = (material) => {
-<<<<<<< HEAD
       console.log('下载资料:', material.name);
     };
 
@@ -857,49 +657,6 @@ export default {
       }
       
       return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-=======
-      // TODO: 实现资料下载
-      console.log('下载资料:', material.name);
-    };
-
-    // 工具方法
-    const formatDuration = (seconds) => {
-      if (!seconds) return '00:00';
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const formatTime = (timestamp) => {
-      return new Date(timestamp).toLocaleString('zh-CN');
-    };
-
-    // 发送评论
-    const sendComment = async () => {
-      if (!newComment.value.trim()) return;
-      
-      try {
-        // TODO: 调用发送评论API
-        console.log('发送评论:', newComment.value);
-        
-        // 模拟添加评论到列表
-        const comment = {
-          id: Date.now(),
-          content: newComment.value,
-          user_name: userInfo.value.user_name,
-          created_time: new Date().toISOString(),
-          likes: 0
-        };
-        
-        discussions.value.unshift(comment);
-        newComment.value = '';
-        
-        // 实际应用中应该调用API然后重新获取评论列表
-        // await handleSendMessage();
-      } catch (error) {
-        console.error('发送评论失败:', error);
-      }
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     };
 
     onMounted(() => {
@@ -920,32 +677,12 @@ export default {
       chapterCollapsed,
       rightPanelCollapsed,
       activeRightTab,
-<<<<<<< HEAD
       isLiked,
       isCollected,
       showEpisodeList,
       notes,
       courseMaterials,
       hasNextVideo,
-=======
-      aiMinimized,
-      isLiked,
-      isCollected,
-      danmakuEnabled,
-      subtitleEnabled,
-      showSubtitleMenu,
-      showSpeedMenu,
-      showQualityMenu,
-      showEpisodeList,
-      playbackSpeed,
-      currentQuality,
-      speedOptions,
-      qualityOptions,
-      notes,
-      courseMaterials,
-      hasNextVideo,
-      newComment,
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
       
       // 原有方法
       getVideoUrl,
@@ -964,14 +701,6 @@ export default {
       toggleLike,
       toggleCollect,
       shareVideo,
-<<<<<<< HEAD
-=======
-      toggleDanmaku,
-      toggleSubtitle,
-      setSubtitle,
-      setPlaybackSpeed,
-      setQuality,
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
       getCurrentEpisodeNumber,
       getAllVideos,
       playNext,
@@ -982,12 +711,7 @@ export default {
       getMaterialIcon,
       downloadMaterial,
       formatDuration,
-<<<<<<< HEAD
       formatTime
-=======
-      formatTime,
-      sendComment
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     };
   },
 };
@@ -1022,11 +746,7 @@ export default {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-<<<<<<< HEAD
 /* 顶部标题栏 */
-=======
-/* 顶部导航栏 */
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 .top-navbar {
   background: white;
   border-bottom: 1px solid var(--border-color);
@@ -1039,7 +759,6 @@ export default {
   position: sticky;
   top: 0;
   z-index: 100;
-<<<<<<< HEAD
 }
 
 .nav-left {
@@ -1068,52 +787,11 @@ export default {
   color: var(--primary-color);
 }
 
-=======
-}
-
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.back-btn:hover {
-  background: var(--secondary-color);
-  color: var(--primary-color);
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 .nav-center {
   flex: 1;
   text-align: center;
   max-width: 600px;
-<<<<<<< HEAD
   margin: 0 auto; 
-=======
-  margin: 0 20px;
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 }
 
 .course-title {
@@ -1128,33 +806,7 @@ export default {
   color: var(--text-secondary);
 }
 
-<<<<<<< HEAD
 /* 移除了用户信息相关样式 */
-=======
-.nav-right {
-  display: flex;
-  align-items: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-}
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 
 /* 主布局 */
 .main-layout {
@@ -1269,7 +921,6 @@ export default {
 .empty-video-player p {
   font-size: 16px;
   opacity: 0.9;
-<<<<<<< HEAD
 }
 
 /* 视频信息和操作栏 */
@@ -1309,47 +960,6 @@ export default {
   color: var(--text-primary);
 }
 
-=======
-}
-
-/* 视频信息和操作栏 */
-.video-actions {
-  padding: 16px 20px;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.video-info-section {
-  flex: 1;
-}
-
-.episode-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-
-.current-episode {
-  background: var(--primary-color);
-  color: white;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.video-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 .video-stats {
   font-size: 14px;
   color: var(--text-secondary);
@@ -1379,7 +989,6 @@ export default {
   background: var(--secondary-color);
   color: var(--primary-color);
   border-color: var(--primary-color);
-<<<<<<< HEAD
 }
 
 .action-btn.active {
@@ -1412,40 +1021,6 @@ export default {
   box-shadow: var(--shadow-sm);
 }
 
-=======
-}
-
-.action-btn.active {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 底部区域 */
-.bottom-section {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-/* AI助手区域 */
-.ai-section {
-  flex: 2;
-  background: white;
-  display: flex;
-  flex-direction: column;
-  min-height: 300px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 .ai-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
@@ -1460,7 +1035,6 @@ export default {
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
-<<<<<<< HEAD
 }
 
 .minimize-btn {
@@ -1473,20 +1047,6 @@ export default {
   transition: all 0.2s ease;
 }
 
-=======
-}
-
-.minimize-btn {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-}
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 .minimize-btn:hover {
   background: var(--border-color);
 }
@@ -1502,7 +1062,6 @@ export default {
   align-items: center;
   height: 200px;
   color: var(--text-secondary);
-<<<<<<< HEAD
 }
 
 .ai-placeholder i {
@@ -1527,32 +1086,6 @@ export default {
   background: var(--secondary-color);
 }
 
-=======
-}
-
-.ai-placeholder i {
-  font-size: 3rem;
-  margin-bottom: 12px;
-  opacity: 0.5;
-}
-
-/* 学习工具区域 */
-.learning-tools {
-  flex: 1;
-  background: white;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  min-width: 300px;
-}
-
-.tools-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--secondary-color);
-}
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 .tools-header h3 {
   font-size: 16px;
   font-weight: 600;
@@ -1583,7 +1116,6 @@ export default {
   width: 40px;
   height: 40px;
   background: var(--primary-color);
-<<<<<<< HEAD
   color: white;
   border-radius: 50%;
   display: flex;
@@ -2019,443 +1551,6 @@ export default {
   }
 }
 
-=======
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.tool-info {
-  flex: 1;
-}
-
-.tool-info h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: var(--border-color);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--success-color);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.stat-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--primary-color);
-  margin: 0;
-}
-
-.knowledge-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag {
-  background: var(--secondary-color);
-  color: var(--text-primary);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  border: 1px solid var(--border-color);
-}
-
-.quick-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.quick-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.quick-btn:hover {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-/* 右侧面板 */
-.right-panel {
-  width: 420px;
-}
-
-.right-panel.collapsed {
-  width: 60px;
-}
-
-.panel-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--secondary-color);
-}
-
-.panel-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.tab-btn:hover {
-  background: var(--border-color);
-}
-
-.tab-btn.active {
-  background: var(--primary-color);
-  color: white;
-}
-
-.panel-toggle {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-}
-
-.panel-toggle:hover {
-  background: var(--border-color);
-}
-
-.panel-content {
-  flex: 1;
-  overflow: hidden;
-  max-height: 500px;
-}
-
-.tab-pane {
-  height: 100%;
-  overflow-y: auto;
-  max-height: 500px;
-}
-
-/* 笔记区域 */
-.notes-section {
-  padding: 20px;
-}
-
-.notes-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.notes-header h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.add-note-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-
-.add-note-btn:hover {
-  background: #1557b0;
-}
-
-.note-item {
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  margin-bottom: 12px;
-  background: white;
-}
-
-.note-time {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.note-content {
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-
-.note-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.note-actions button {
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-}
-
-.note-actions button:hover {
-  background: var(--secondary-color);
-  color: var(--primary-color);
-}
-
-/* 资料区域 */
-.materials-section {
-  padding: 20px;
-}
-
-.materials-section h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-}
-
-.material-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.material-item:hover {
-  box-shadow: var(--shadow-sm);
-}
-
-.material-icon {
-  color: var(--error-color);
-  font-size: 20px;
-}
-
-.material-info {
-  flex: 1;
-}
-
-.material-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.material-size {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.download-btn {
-  background: none;
-  border: 1px solid var(--border-color);
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-.download-btn:hover {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: var(--text-secondary);
-}
-
-.empty-state i {
-  font-size: 3rem;
-  margin-bottom: 12px;
-  opacity: 0.5;
-}
-
-/* 选集弹窗 */
-.episode-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.episode-content {
-  background: white;
-  border-radius: var(--radius-md);
-  max-width: 600px;
-  max-height: 80vh;
-  width: 90%;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-lg);
-}
-
-.episode-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.episode-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.episode-header button {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-}
-
-.episode-header button:hover {
-  background: var(--secondary-color);
-}
-
-.episode-sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-  max-height: 400px;
-  padding: 20px;
-}
-
-.episode-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.episode-item:hover {
-  background: var(--secondary-color);
-}
-
-.episode-item.active {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
-
-.episode-number {
-  font-weight: 600;
-  min-width: 60px;
-}
-
-.episode-title {
-  flex: 1;
-  font-size: 14px;
-}
-
-.episode-duration {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.episode-item.active .episode-duration {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .main-layout {
-    grid-template-columns: auto 1fr 300px;
-  }
-  
-  .chapter-sidebar {
-    width: 240px;
-  }
-  
-  .right-panel {
-    width: 300px;
-  }
-}
-
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 @media (max-width: 768px) {
   .main-layout {
     grid-template-columns: 1fr;

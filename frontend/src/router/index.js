@@ -4,17 +4,18 @@ import CourseVideo from '../views/CourseVideo.vue'
 import CourseDetail from '../views/CourseDetail.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
-<<<<<<< HEAD
 import Home from '@/views/Home.vue' 
-=======
-import SearchResults from '../views/SearchResults.vue'
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 import Community from '../views/Community.vue'
 import StudentCenter from '../views/StudentCenter.vue'
 import TeacherCenter from '../views/TeacherCenter.vue'
 import PersonalCenterRouter from '../views/PersonalCenterRouter.vue'
 
 const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: Home
+  },
   {
     path: '/login',
     name: 'Login',
@@ -26,8 +27,8 @@ const routes = [
     component: Register
   },
   {
-    path: '/',
-    name: 'Home',
+    path: '/search',
+    name: 'Search',
     component: Home
   },
   {
@@ -48,28 +49,56 @@ const routes = [
   {
     path: '/personal',
     name: 'PersonalCenterRouter',
-    component: PersonalCenterRouter
+    component: PersonalCenterRouter,
+    meta: {
+      requiresAuth: true
+    }
   },
   {
     path: '/personal/student',
     name: 'StudentCenter',
-    component: StudentCenter
+    component: StudentCenter,
+    meta: {
+      requiresAuth: true,
+      title: '学生个人中心',
+      role: 'learner'
+    }
   },
   {
     path: '/personal/teacher',
     name: 'TeacherCenter',
-    component: TeacherCenter
-<<<<<<< HEAD
-=======
-  },
-  {
-    path: '/',
-    redirect: to => {
-      // 如果已登录，跳转到搜索页；否则跳转到登录页
-      const token = localStorage.getItem('token')
-      return token ? '/search' : '/login'
+    component: TeacherCenter,
+    meta: {
+      requiresAuth: true,
+      title: '教师个人中心',
+      role: 'instructor'
     }
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
+  },
+  // 学情分析路由 - 修正路径，确保与访问路径一致
+  {
+    path: '/student/behavior',
+    name: 'StudentBehaviorAnalysis',
+    component: () => import('@/views/StudentBehaviorAnalysis.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '学习行为分析',
+      role: 'learner'
+    }
+  },
+  // 保持原有路径作为别名，确保兼容性
+  {
+    path: '/personal/learning-analysis/behavior',
+    name: 'LearningBehaviorAnalysis',
+    redirect: '/student/behavior'
+  },
+  // 添加课程列表页面的路由（修正之前的警告）
+  {
+    path: '/courses',
+    name: 'Courses',
+    redirect: '/', // 暂时重定向到首页，或者可以创建一个专门的课程列表页
+    meta: {
+      requiresAuth: false
+    }
   }
 ]
 
@@ -79,10 +108,13 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const publicPaths = ['/login', '/register']
+  const publicPaths = ['/', '/login', '/register', '/courses', '/search']
   const isPublic = publicPaths.includes(to.path)
   const token = localStorage.getItem('token')
-
+  
+  console.log(`路由跳转: ${from.path} -> ${to.path}`)
+  console.log(`Token状态: ${token ? '已登录' : '未登录'}`)
+  
   // 如果是公开页面，直接放行
   if (isPublic) {
     return next()
@@ -90,14 +122,67 @@ router.beforeEach((to, from, next) => {
 
   // 如果需要认证但没有 token，跳转到登录页
   if (!token) {
+    console.log('未授权访问，跳转到登录页')
     return next({
       path: '/login',
       query: { redirect: to.fullPath },
     })
   }
 
-  // 已登录，放行
+  // 获取用户角色（实际项目中应该从token解码或API获取）
+  const getUserRole = () => {
+    try {
+      // 从localStorage获取用户信息
+      const userInfoStr = localStorage.getItem('userInfo')
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr)
+        return userInfo.role || 'learner'
+      }
+      return 'learner'
+    } catch (error) {
+      console.error('获取用户角色失败:', error)
+      return 'learner'
+    }
+  }
+
+  const userRole = getUserRole()
+  
+  // 检查角色权限
+  if (to.meta.role && to.meta.role !== userRole) {
+    console.log(`权限不足: 需要${to.meta.role}角色，当前是${userRole}`)
+    
+    // 根据用户角色重定向到对应的个人中心
+    if (userRole === 'learner') {
+      return next('/personal/student')
+    } else if (userRole === 'instructor') {
+      return next('/personal/teacher')
+    } else {
+      return next('/')
+    }
+  }
+
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = `${to.meta.title} - 墨知课堂`
+  } else {
+    document.title = '墨知课堂'
+  }
+
+  console.log('路由放行')
   next()
+})
+
+// 添加路由错误处理
+router.onError((error) => {
+  console.error('路由错误:', error)
+  
+  // 如果是组件加载失败，可以重试或显示错误页面
+  const pattern = /Loading chunk (\d)+ failed/g
+  const isChunkLoadError = error.message.match(pattern)
+  
+  if (isChunkLoadError) {
+    window.location.reload()
+  }
 })
 
 export default router

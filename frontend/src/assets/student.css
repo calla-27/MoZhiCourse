@@ -349,6 +349,179 @@ body {
     font-size: 0.85rem;
 }
 
+/* 在原有的student.css中添加以下样式 */
+
+/* 学习库样式 */
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.course-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.course-image {
+  height: 160px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.course-content {
+  padding: 20px;
+}
+
+.course-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #202124;
+}
+
+.course-content p {
+  font-size: 0.9rem;
+  color: #5f6368;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.course-meta {
+  font-size: 0.8rem;
+  color: #80868b;
+  margin-bottom: 12px;
+}
+
+.course-progress {
+  margin: 15px 0;
+}
+
+.progress-bar {
+  height: 6px;
+  background: #e8f0fe;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1a73e8, #6c8ef5);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  color: #5f6368;
+  text-align: right;
+}
+
+.course-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.action-btn.primary {
+  background: #1a73e8;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: #0d5bb9;
+}
+
+.action-btn.outline {
+  background: white;
+  color: #5f6368;
+  border: 1px solid #dadce0;
+}
+
+.action-btn.outline:hover {
+  background: #f8f9fa;
+  border-color: #5f6368;
+}
+
+/* 空状态样式 */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  color: #dadce0;
+  margin-bottom: 15px;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  color: #5f6368;
+  margin-bottom: 15px;
+}
+
+.empty-hint {
+  font-size: 0.9rem !important;
+  color: #80868b !important;
+  margin-bottom: 20px !important;
+}
+
+.browse-btn {
+  background: #1a73e8;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.browse-btn:hover {
+  background: #0d5bb9;
+}
+
+/* 标签页响应式 */
+@media (max-width: 768px) {
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .course-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    width: 100%;
+  }
+}
+
 /* 课程网格 */
 .courses-grid {
     display: grid;
@@ -371,6 +544,10 @@ body {
     width: 100%;
     height: 100px;
     background: linear-gradient(135deg, #667eea, #764ba2);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 8px 8px 0 0;
 }
 
 .course-content {

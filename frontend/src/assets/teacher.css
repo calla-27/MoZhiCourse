@@ -104,6 +104,7 @@ body {
     background: white;
     border-radius: 15px;
     padding: 40px;
+    position: relative;
     margin: 30px 0;
     box-shadow: 0 3px 15px rgba(0,0,0,0.08);
     display: flex;
@@ -473,19 +474,28 @@ body {
 }
 
 /* 新增样式 */
-.edit-icon {
+.edit-icons {
     position: absolute;
     top: 20px;
     right: 20px;
-    background: var(--light);
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
+.edit-icon {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--gray);
+    border: 1px solid var(--border);
     border-radius: 50%;
     width: 40px;
     height: 40px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .edit-icon:hover {

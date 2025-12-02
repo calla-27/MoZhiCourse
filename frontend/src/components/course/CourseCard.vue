@@ -1,6 +1,6 @@
 <template>
   <div class="course-card" @click="handleCardClick">
-    <div class="course-image" :style="coverStyle">
+    <div class="course-image" :style="getImageStyle(course.image)">
       <span class="course-difficulty">{{ course.difficulty }}</span>
     </div>
     <div class="course-content">
@@ -18,7 +18,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -30,30 +29,31 @@ const props = defineProps({
 
 const router = useRouter()
 
-// 封面样式：优先使用后端返回的 cover_img，其次回退到原有的 course.image
-const coverStyle = computed(() => {
-  const c = props.course || {}
-
-  if (c.cover_img) {
-    return {
-      backgroundImage: `url(${c.cover_img})`
-    }
-  }
-
-  if (c.image) {
-    // 兼容之前使用的渐变/纯色背景
-    return {
-      background: c.image
-    }
-  }
-
-  return {
-    backgroundColor: '#f5f5f5'
-  }
-})
-
 const handleCardClick = () => {
   router.push(`/course/${props.course.id}`)
+}
+
+const getImageStyle = (image) => {
+  if (!image) {
+    return {
+      background: 'linear-gradient(135deg, #667eea, #764ba2)'
+    }
+  }
+  
+  // 如果是图片URL，使用backgroundImage
+  if (typeof image === 'string' && (image.startsWith('http') || image.startsWith('/'))) {
+    return {
+      backgroundImage: `url(${image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }
+  }
+  
+  // 如果是渐变或其他CSS值，直接使用background
+  return {
+    background: image
+  }
 }
 </script>
 
@@ -65,6 +65,8 @@ const handleCardClick = () => {
   box-shadow: 0 3px 15px rgba(0,0,0,0.08);
   transition: all 0.3s ease;
   cursor: pointer;
+  width: 100%;
+  min-width: 0;
 }
 
 .course-card:hover {
@@ -76,9 +78,6 @@ const handleCardClick = () => {
   width: 100%;
   height: 180px;
   position: relative;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 
 .course-difficulty {
@@ -109,6 +108,7 @@ const handleCardClick = () => {
   font-size: 0.9rem;
   margin-bottom: 15px;
   line-height: 1.5;
+  line-clamp: 2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

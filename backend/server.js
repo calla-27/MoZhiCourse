@@ -17,6 +17,8 @@ const commentRoutes = require('./routes/commentRoutes');
 const communityRoutes = require('./routes/community');
 const personalCenterRoutes = require('./routes/personalCenter');
 const teacherCenterRoutes = require('./routes/teacherCenter');
+const userCoursesRoutes = require('./routes/userCourses'); // 新增：用户课程路由
+const studentBehaviorRoutes = require('./routes/studentBehaviorRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,6 +83,8 @@ app.use('/api/comment', commentRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/personal', personalCenterRoutes);
 app.use('/api/teacher', teacherCenterRoutes);
+app.use('/api/user-courses', userCoursesRoutes); // 新增：用户课程路由
+app.use('/api/student/behavior', studentBehaviorRoutes);
 
 // 根路径 - API 文档首页
 app.get('/', (req, res) => {
@@ -98,6 +102,7 @@ app.get('/', (req, res) => {
       '学习社区': '/api/community',
       '个人中心': '/api/personal',
       '教师中心': '/api/teacher',
+      '用户课程管理': '/api/user-courses', // 新增
       '健康检查': '/api/health'
     }
   });
@@ -149,6 +154,7 @@ const startServer = async () => {
 ║     - 讲师: /api/teachers                          ║
 ║     - 学习社区: /api/community                     ║
 ║     - 个人中心: /api/personal                      ║
+║     - 用户课程: /api/user-courses                  ║
 ║                                                   ║
 ╚═══════════════════════════════════════════════════╝
       `);
