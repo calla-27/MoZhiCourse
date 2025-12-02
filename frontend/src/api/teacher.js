@@ -96,3 +96,31 @@ export const apiDeleteCourse = async (courseId) => {
     return { success: false, message: '删除失败' };
   }
 };
+
+// 获取学生知识掌握分布数据（环状图）
+export const apiMasteryDistribution = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/api/teacher/analytics/mastery-distribution`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch (error) {
+    console.error('获取知识掌握分布失败:', error);
+    return { success: false, data: [] };
+  }
+};
+
+// 获取知识点词云数据
+export const apiKnowledgeWordCloud = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/api/teacher/analytics/knowledge-wordcloud`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch (error) {
+    console.error('获取词云数据失败:', error);
+    return { success: false, data: [] };
+  }
+};

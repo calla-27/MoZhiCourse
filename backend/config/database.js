@@ -1,13 +1,13 @@
-// config/database.js - 临时硬编码配置以进行测试
+// config/database.js - 从.env读取配置
 const mysql = require('mysql2/promise');
-// require('dotenv').config();
+require('dotenv').config();
 
 const dbConfig = {
-  host: '127.0.0.1',       
-  port: 3306,
-  user: 'root',
-  password: '123456',
-  database: 'mzcourse',
+  host: process.env.DB_HOST || '127.0.0.1',       
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'mzcourse',
   charset: 'utf8mb4',
   connectionLimit: 10,
 };

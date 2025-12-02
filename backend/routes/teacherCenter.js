@@ -42,4 +42,11 @@ router.delete('/courses/:courseId', requireTeacher, teacherCenterController.dele
 // 获取课程学生列表
 router.get('/courses/:courseId/students', requireTeacher, teacherCenterController.getCourseStudents);
 
+// ==================== 数据分析相关 ====================
+// 获取学生知识掌握分布（环状图）
+router.get('/analytics/mastery-distribution', requireTeacher, teacherCenterController.getKnowledgeMasteryDistribution);
+
+// 获取知识点词云数据
+router.get('/analytics/knowledge-wordcloud', requireTeacher, teacherCenterController.getKnowledgeWordCloud);
+
 module.exports = router;

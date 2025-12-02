@@ -90,6 +90,55 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    // 更新个人资料（昵称/邮箱/简介等）
+    async updateProfile(payload) {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          throw new Error('未找到认证token')
+        }
+
+        const body = {}
+        if (payload.userName !== undefined) {
+          body.user_name = payload.userName
+        }
+        if (payload.email !== undefined) {
+          body.email = payload.email
+        }
+        if (payload.userIntro !== undefined) {
+          body.user_intro = payload.userIntro
+        }
+
+        const res = await fetch(`${API_BASE}/api/personal/profile`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        const data = await res.json()
+
+        if (data.success) {
+          if (payload.userName !== undefined) {
+            this.userName = payload.userName
+          }
+          if (payload.email !== undefined) {
+            this.email = payload.email
+          }
+          if (payload.userIntro !== undefined) {
+            this.userIntro = payload.userIntro
+          }
+        } else {
+          throw new Error(data.message || '更新个人资料失败')
+        }
+      } catch (error) {
+        console.error('更新个人资料失败:', error)
+        throw error
+      }
+    },
+
     // 更新用户名
     async updateName(newName) {
       try {
@@ -142,37 +191,7 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-<<<<<<< HEAD
-    // 更新邮箱
-    async updateEmail(newEmail) {
-      try {
-        const token = localStorage.getItem('token')
-        const res = await fetch(`${API_BASE}/api/personal/profile`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email: newEmail })
-        })
-
-        const data = await res.json()
-
-        if (data.success) {
-          this.email = newEmail
-        } else {
-          throw new Error(data.message || '更新邮箱失败')
-        }
-      } catch (error) {
-        console.error('更新邮箱失败:', error)
-        throw error
-      }
-    },
-
-    // 更新头像（由 AvatarModal 上传成功后回调）
-=======
     // 更新头像
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     async updateAvatar(avatarUrl) {
       this.avatarUrl = avatarUrl
     },

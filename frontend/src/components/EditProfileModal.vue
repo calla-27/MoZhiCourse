@@ -6,16 +6,38 @@
         <button class="close-btn" @click="close">&times;</button>
       </div>
       <div class="form-group">
-        <label>昵称</label>
-        <input v-model="form.userName" type="text" class="form-input" placeholder="请输入昵称" />
+        <label>昵称 <span class="required">*</span></label>
+        <input 
+          v-model="form.userName" 
+          type="text" 
+          class="form-input" 
+          placeholder="请输入昵称"
+          maxlength="20"
+          :class="{ 'error': errors.userName }"
+        />
+        <div v-if="errors.userName" class="error-text">{{ errors.userName }}</div>
       </div>
       <div class="form-group">
-        <label>邮箱</label>
-        <input v-model="form.email" type="email" class="form-input" placeholder="请输入邮箱" />
+        <label>邮箱 <span class="required">*</span></label>
+        <input 
+          v-model="form.email" 
+          type="email" 
+          class="form-input" 
+          placeholder="请输入邮箱"
+          :class="{ 'error': errors.email }"
+        />
+        <div v-if="errors.email" class="error-text">{{ errors.email }}</div>
       </div>
       <div class="form-group">
         <label>个性签名</label>
-        <textarea v-model="form.userIntro" class="form-input" rows="3" placeholder="写点什么介绍自己吧～" />
+        <textarea 
+          v-model="form.userIntro" 
+          class="form-input" 
+          rows="3" 
+          placeholder="写点什么介绍自己吧～"
+          maxlength="100"
+        />
+        <div class="char-count">{{ form.userIntro.length }}/100</div>
       </div>
       <button class="btn btn-primary" @click="save" :disabled="saving">
         {{ saving ? '保存中...' : '保存' }}
@@ -42,6 +64,11 @@ const form = reactive({
   userIntro: ''
 })
 
+const errors = reactive({
+  userName: '',
+  email: ''
+})
+
 const saving = ref(false)
 
 watch(
@@ -60,15 +87,36 @@ function close() {
   emit('update:modelValue', false)
 }
 
-async function save() {
+function validateForm() {
+  errors.userName = ''
+  errors.email = ''
+  
   if (!form.userName.trim()) {
-    alert('昵称不能为空')
+    errors.userName = '昵称不能为空'
+  } else if (form.userName.length < 2) {
+    errors.userName = '昵称至少需要2个字符'
+  }
+  
+  if (!form.email.trim()) {
+    errors.email = '邮箱不能为空'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    errors.email = '请输入有效的邮箱地址'
+  }
+  
+  return !errors.userName && !errors.email
+}
+
+async function save() {
+  if (!validateForm()) {
     return
   }
+  
   saving.value = true
   try {
     await emit('save', { ...form })
     emit('update:modelValue', false)
+  } catch (error) {
+    console.error('保存失败:', error)
   } finally {
     saving.value = false
   }
@@ -157,5 +205,26 @@ async function save() {
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.required {
+  color: #e74c3c;
+}
+
+.form-input.error {
+  border-color: #e74c3c;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.3rem;
 }
 </style>

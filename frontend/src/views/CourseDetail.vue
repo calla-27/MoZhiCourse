@@ -1,5 +1,4 @@
 <template>
-<<<<<<< HEAD
   <CourseDetailView
     :course="course"
     :instructor="instructor"
@@ -11,282 +10,21 @@
     :course-features="courseFeatures"
     :active-tab="activeTab"
     :is-favorite="isFavorite"
+    :is-enrolled="isEnrolled"
+    :is-toggling-library="isTogglingLibrary"
     :new-rating="newRating"
     :new-review-content="newReviewContent"
     :is-submitting="isSubmitting"
     @update:active-tab="activeTab = $event"
     @toggle-chapter="toggleChapter"
-    @go-to-first-video="goToFirstVideo"
-    @go-to-video="goToVideo"
-    @toggle-favorite="toggleFavorite"
+    @go-to-first-video="handleGoToFirstVideo"
+    @go-to-video="handleGoToVideo"
+    @toggle-favorite="toggleFavorite"         
+    @enroll-course="handleEnrollCourse"    
     @update:new-rating="newRating = $event"
     @update:new-review-content="newReviewContent = $event"
     @handle-submit-review="handleSubmitReview"
   />
-=======
-  <div class="course-detail">
-    <!-- 课程头部 -->
-    <section class="course-header">
-      <div class="container">
-        <div class="course-info">
-          <span class="course-category">{{ course.categoryName }}</span>
-          <h1>{{ course.title }}</h1>
-          <p class="course-description">{{ course.description }}</p>
-          <div class="course-meta">
-            <div class="meta-item">
-              <i class="fas fa-star"></i>
-              <span>{{ course.rating }} ({{ course.reviewCount }} 评价)</span>
-            </div>
-            <div class="meta-item">
-              <i class="fas fa-users"></i>
-              <span>{{ course.studentCount }} 名学生</span>
-            </div>
-            <div class="meta-item">
-              <i class="fas fa-clock"></i>
-              <span>{{ course.duration }} 小时</span>
-            </div>
-            <div class="meta-item">
-              <i class="fas fa-signal"></i>
-              <span>{{ course.difficulty }}</span>
-            </div>
-          </div>
-          <div class="course-actions">
-            <button class="btn btn-primary" @click="goToFirstVideo">
-              <i class="fas fa-play"></i>
-              开始学习
-            </button>
-            <button 
-              class="btn btn-secondary" 
-              :class="{ 'btn-secondary-active': isFavorite }" 
-              @click="toggleFavorite"
-            >
-              <i :class="isFavorite ? 'fas fa-heart' : 'far fa-heart'"></i>
-              收藏
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="container">
-      <!-- 标签页 -->
-      <div class="tabs">
-        <div 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          class="tab" 
-          :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
-        >
-          {{ tab.name }}
-        </div>
-      </div>
-
-      <!-- 课程介绍 -->
-      <div v-if="activeTab === 'overview'" class="tab-content">
-        <div class="content-section">
-          <h2 class="section-title">课程介绍</h2>
-          <div class="course-overview">
-            <div class="overview-content">
-              <p>{{ courseOverview || course.description || '暂无课程介绍' }}</p>
-              
-              <h3>学习目标</h3>
-              <ul v-if="learningObjectives && learningObjectives.length > 0">
-                <li v-for="objective in learningObjectives" :key="objective">{{ objective }}</li>
-              </ul>
-              <ul v-else>
-                <li>掌握课程核心知识点</li>
-                <li>提升实际应用能力</li>
-                <li>培养解决问题的思维</li>
-              </ul>
-              
-              <div class="features-grid" v-if="courseFeatures && courseFeatures.length > 0">
-                <div 
-                  v-for="feature in courseFeatures" 
-                  :key="feature.title"
-                  class="feature-item"
-                >
-                  <div class="feature-icon">
-                    <i :class="feature.icon || 'fas fa-star'"></i>
-                  </div>
-                  <h4>{{ feature.title }}</h4>
-                  <p>{{ feature.description }}</p>
-                </div>
-              </div>
-              <div class="features-grid" v-else>
-                <div class="feature-item">
-                  <div class="feature-icon">
-                    <i class="fas fa-laptop-code"></i>
-                  </div>
-                  <h4>实战驱动</h4>
-                  <p>通过真实项目学习编程</p>
-                </div>
-                <div class="feature-item">
-                  <div class="feature-icon">
-                    <i class="fas fa-graduation-cap"></i>
-                  </div>
-                  <h4>循序渐进</h4>
-                  <p>系统学习路径</p>
-                </div>
-                <div class="feature-item">
-                  <div class="feature-icon">
-                    <i class="fas fa-comments"></i>
-                  </div>
-                  <h4>社区支持</h4>
-                  <p>互动交流学习</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 课程大纲 -->
-      <div v-if="activeTab === 'curriculum'" class="tab-content">
-        <div class="content-section">
-          <h2 class="section-title">课程大纲</h2>
-          <div class="curriculum-content">
-            <div 
-              v-for="chapter in chapters" 
-              :key="chapter.id"
-              class="chapter" 
-              :class="{ active: chapter.isOpen }"
-            >
-              <div class="chapter-header" @click="toggleChapter(chapter.id)">
-                <div class="chapter-title">
-                  <i :class="chapter.isOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-right'"></i>
-                  <span>{{ chapter.title }}</span>
-                </div>
-                <span>{{ chapter.lessonCount }}个视频</span>
-              </div>
-              <div class="chapter-content">
-                <div 
-                  v-for="lesson in chapter.lessons" 
-                  :key="lesson.id"
-                  class="lesson lesson-clickable"
-                  @click="goToVideo(lesson.id)"
-                >
-                  <div class="lesson-icon">
-                    <i class="fas fa-play-circle"></i>
-                  </div>
-                  <div class="lesson-info">
-                    <div class="lesson-title">{{ lesson.title }}</div>
-                    <div class="lesson-meta">{{ lesson.duration }}分钟</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 讲师介绍 -->
-      <div v-if="activeTab === 'instructor'" class="tab-content">
-        <div class="content-section">
-          <h2 class="section-title">讲师介绍</h2>
-          <div class="instructor-card">
-            <div class="instructor-avatar" v-if="!instructor.avatar">{{ instructor.name ? instructor.name.charAt(0) : '讲' }}</div>
-            <img v-else :src="instructor.avatar" class="instructor-avatar-img" alt="讲师头像">
-            <div class="instructor-info">
-              <h3>{{ instructor.name }}</h3>
-              <div class="instructor-title">{{ instructor.title }}</div>
-              <p style="margin-bottom: 15px; line-height: 1.5;">
-                {{ instructor.intro }}
-              </p>
-              <div class="instructor-stats">
-                <div class="stat">
-                  <div class="stat-value">{{ course.rating }}/5.0</div>
-                  <div class="stat-label">讲师评分</div>
-                </div>
-                <div class="stat">
-                  <div class="stat-value">{{ course.studentCount }}</div>
-                  <div class="stat-label">学生人数</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 学生评价 -->
-      <div v-if="activeTab === 'reviews'" class="tab-content">
-        <div class="content-section">
-          <h2 class="section-title">学生评价</h2>
-          
-          <!-- 评价表单 -->
-          <div class="review-form">
-            <h3 class="form-title">发表你的评价</h3>
-            <div class="rating-selector">
-              <label>课程评分：</label>
-              <div class="stars">
-                <i 
-                  v-for="star in 5" 
-                  :key="star"
-                  class="star-icon"
-                  :class="star <= newRating ? 'fas fa-star active' : 'far fa-star'"
-                  @click="newRating = star"
-                ></i>
-              </div>
-            </div>
-            <div class="review-input">
-              <label>评价内容：</label>
-              <textarea 
-                v-model="newReviewContent" 
-                placeholder="请分享你对这门课程的看法和建议..."
-                rows="4"
-                maxlength="500"
-              ></textarea>
-              <div class="char-count">{{ newReviewContent.length }}/500</div>
-            </div>
-            <button 
-              class="btn-submit" 
-              @click="handleSubmitReview"
-              :disabled="isSubmitting || !newReviewContent.trim()"
-            >
-              {{ isSubmitting ? '提交中...' : '提交评价' }}
-            </button>
-          </div>
-          
-          <div class="reviews-grid">
-            <div 
-              v-for="review in reviews" 
-              :key="review.id"
-              class="review-card"
-            >
-              <div class="review-header">
-                <div class="reviewer">
-                  <div class="reviewer-avatar">{{ review.avatar }}</div>
-                  <div>
-                    <div style="font-weight: 600;">{{ review.name }}</div>
-                    <div style="font-size: 0.8rem; color: #5f6368;">{{ review.job }}</div>
-                  </div>
-                </div>
-                <div class="rating">
-                  <i v-for="n in 5" :key="n" class="fas fa-star"></i>
-                </div>
-              </div>
-              <div class="review-content">
-                {{ review.content }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 相关课程 -->
-      <div class="content-section">
-        <h2 class="section-title">相关课程推荐</h2>
-        <div class="related-courses">
-          <CourseCard 
-            v-for="relatedCourse in relatedCourses" 
-            :key="relatedCourse.id"
-            :course="relatedCourse"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 </template>
 
 <script setup>
@@ -296,8 +34,6 @@ import CourseDetailView from '@/components/layout/CourseDetailView.vue'
 import { 
   getCourseDetail, 
   getCourseChapters,
-  getCourseFavoriteStatus,
-  toggleCourseFavorite,
   getCourseReviews,
   getRelatedCourses,
   submitCourseReview
@@ -307,6 +43,10 @@ const route = useRoute()
 const router = useRouter()
 const activeTab = ref('overview')
 const isFavorite = ref(false)
+const isEnrolled = ref(false)
+const isTogglingLibrary = ref(false)
+
+const API_BASE = 'http://localhost:4000' // 添加 API_BASE 常量
 
 const course = ref({
   id: null,
@@ -348,11 +88,117 @@ const toggleChapter = (chapterId) => {
   }
 }
 
+// 报名课程
+// 修改 handleEnrollCourse 函数，添加更多调试信息
+const handleEnrollCourse = async () => {
+  if (!course.value.id) return
+  
+  isTogglingLibrary.value = true
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('请先登录后再操作')
+      router.push('/login')
+      return
+    }
+    
+    // 调用新的报名接口
+    const url = `${API_BASE}/api/personal/library/${course.value.id}/enroll`
+    
+    console.log('🚀 发送报名请求:', url)
+    
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    const data = await res.json()
+    
+    console.log('📦 报名响应:', data)
+    
+    if (data.success) {
+      // 直接使用后端返回的 is_enrolled 字段
+      isEnrolled.value = data.data?.is_enrolled ?? true
+      
+      alert(data.message || '报名成功！')
+      
+      console.log(`✅ 报名状态更新为: 已报名`)
+      console.log(`📊 当前章节数据:`, chapters.value)
+      console.log(`📊 章节数量:`, chapters.value.length)
+    } else {
+      alert(data.message || '报名失败')
+    }
+  } catch (error) {
+    console.error('🔥 报名失败:', error)
+    alert('报名失败：' + error.message)
+  } finally {
+    isTogglingLibrary.value = false
+  }
+}
+
+// 检查课程状态（报名和收藏）
+const checkCourseStatus = async (courseId) => {
+  if (!courseId) return
+  
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      isFavorite.value = false
+      isEnrolled.value = false
+      return
+    }
+    
+    console.log('🔍 检查课程状态:', courseId)
+    
+    // 调用检查状态的接口（应该同时返回报名和收藏状态）
+    const url = `${API_BASE}/api/personal/library/${courseId}/status`
+    
+    const res = await fetch(url, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!res.ok) {
+      console.warn('课程状态接口不可用:', res.status)
+      isFavorite.value = false
+      isEnrolled.value = false
+      return
+    }
+    
+    const data = await res.json()
+    
+    console.log('📊 课程状态响应:', data)
+    
+    if (data.success) {
+      // 根据后端返回的字段名设置状态
+      isEnrolled.value = data.data?.is_enrolled || false
+      isFavorite.value = data.data?.is_favorite || false
+      
+      console.log(`📋 课程状态: 报名=${isEnrolled.value ? '是' : '否'}, 收藏=${isFavorite.value ? '是' : '否'}`)
+    } else {
+      console.warn('获取课程状态失败:', data.message)
+      isFavorite.value = false
+      isEnrolled.value = false
+    }
+  } catch (error) {
+    console.warn('⚠️ 获取课程状态失败:', error)
+    isFavorite.value = false
+    isEnrolled.value = false
+  }
+}
+
+// 修改 loadCourseData 函数，添加章节数据调试
 const loadCourseData = async () => {
   const courseId = route.params.courseId || route.params.id
   if (!courseId) return
 
   try {
+    // 获取课程详情和章节信息
     const [courseRes, chaptersRes] = await Promise.all([
       getCourseDetail(courseId),
       getCourseChapters(courseId)
@@ -371,48 +217,36 @@ const loadCourseData = async () => {
       categoryName: c.category_name || '未分类'
     }
 
-    // 解析讲师信息
-    instructor.value = {
-      name: c.teacher_name || '未知讲师',
-      title: c.teacher_occupation || '讲师',
-      intro: c.teacher_intro || '暂无介绍',
-      avatar: c.teacher_avatar || ''
-    }
-
-    // 解析课程扩展信息
-    courseOverview.value = c.course_overview || ''
-    learningObjectives.value = Array.isArray(c.learning_objectives) ? c.learning_objectives : []
-    courseFeatures.value = Array.isArray(c.course_features) ? c.course_features : []
-
+    // 解析章节信息
     const rawChapters = (chaptersRes && chaptersRes.data) || chaptersRes || []
+    console.log('📋 原始章节数据:', rawChapters)
+    
     chapters.value = rawChapters.map((ch, index) => {
       const videos = ch.videos || []
-      return {
+      const chapterData = {
         id: ch.chapter_id,
-        title: ch.chapter_title,
+        title: ch.chapter_title || `第${index + 1}章`,
         lessonCount: videos.length,
-        isOpen: index === 0,
+        isOpen: index === 0, // 默认打开第一章
         lessons: videos.map(v => ({
           id: v.video_id,
-          title: v.video_title,
+          title: v.video_title || `视频${index + 1}`,
           duration: Math.round((v.duration_seconds || 0) / 60) || 0
         }))
       }
+      console.log(`📝 章节${index + 1}处理结果:`, chapterData)
+      return chapterData
     })
+    
+    console.log(`✅ 最终章节数据:`, chapters.value)
+    console.log(`📊 章节数量:`, chapters.value.length)
 
-    // 加载当前用户是否已收藏
-    try {
-      const favRes = await getCourseFavoriteStatus(courseId)
-      const favData = (favRes && favRes.data) || favRes || {}
-      if (typeof favData.isFavorite === 'boolean') {
-        isFavorite.value = favData.isFavorite
-      } else if (favData.data && typeof favData.data.isFavorite === 'boolean') {
-        isFavorite.value = favData.data.isFavorite
-      }
-    } catch (err) {
-      console.warn('获取课程收藏状态失败（可能未登录）:', err?.response?.status)
-    }
+    // 统一检查课程状态（报名和收藏）
+    await checkCourseStatus(courseId)
+    
+    console.log(`🔍 状态检查完成: 报名=${isEnrolled.value}, 收藏=${isFavorite.value}`)
 
+    
     // 加载课程评价
     try {
       const reviewsRes = await getCourseReviews(courseId, 10)
@@ -445,7 +279,7 @@ const loadCourseData = async () => {
         image: rc.cover_img
           ? (rc.cover_img.startsWith('http')
               ? `url(${rc.cover_img})`
-              : `url(http://localhost:4000${rc.cover_img})`)
+              : `url(${API_BASE}${rc.cover_img})`)
           : 'linear-gradient(135deg, #667eea, #764ba2)'
       }))
     } catch (err) {
@@ -456,7 +290,13 @@ const loadCourseData = async () => {
   }
 }
 
-const goToFirstVideo = () => {
+// 跳转到第一个视频（已报名才能访问）
+const handleGoToFirstVideo = () => {
+  if (!isEnrolled.value) {
+    alert('请先报名课程才能开始学习')
+    return
+  }
+  
   if (!course.value.id || !chapters.value.length) return
   const firstChapter = chapters.value[0]
   const firstLesson = firstChapter.lessons && firstChapter.lessons[0]
@@ -465,29 +305,62 @@ const goToFirstVideo = () => {
   router.push(`/course/${course.value.id}/video/${firstLesson.id}`)
 }
 
-// 跳转到指定视频
-const goToVideo = (videoId) => {
+// 跳转到指定视频（已报名才能访问）
+const handleGoToVideo = (videoId) => {
+  if (!isEnrolled.value) {
+    alert('请先报名课程才能学习视频')
+    return
+  }
+  
   if (!course.value.id || !videoId) return
   router.push(`/course/${course.value.id}/video/${videoId}`)
 }
 
 const toggleFavorite = async () => {
   if (!course.value.id) return
-
+  
   try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('请先登录后再收藏')
+      router.push('/login')
+      return
+    }
+    
     const targetStatus = !isFavorite.value
-    const res = await toggleCourseFavorite(course.value.id, targetStatus)
-    const data = (res && res.data) || res || {}
-    const final =
-      typeof data.isFavorite === 'boolean'
-        ? data.isFavorite
-        : data.data && typeof data.data.isFavorite === 'boolean'
-          ? data.data.isFavorite
-          : targetStatus
-
-    isFavorite.value = final
+    
+    console.log(`❤️ 切换收藏状态: 课程ID=${course.value.id}, 目标状态=${targetStatus}`)
+    
+    // 调用收藏接口
+    const res = await fetch(`${API_BASE}/api/personal/favorites/${course.value.id}/toggle`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        isFavorite: targetStatus
+      })
+    })
+    
+    const data = await res.json()
+    console.log('📦 收藏响应:', data)
+    
+    if (data.success) {
+      // 更新前端状态
+      isFavorite.value = data.data?.is_favorite ?? targetStatus
+      console.log(`✅ 收藏状态更新为: ${isFavorite.value ? '已收藏' : '未收藏'}`)
+      
+      // 显示提示信息
+      alert(isFavorite.value ? '已添加到收藏' : '已取消收藏')
+    } else {
+      // 如果收藏失败
+      alert(data.message || '操作失败')
+    }
+    
   } catch (error) {
     console.error('更新收藏状态失败:', error)
+    alert('操作失败：' + error.message)
   }
 }
 
@@ -536,530 +409,8 @@ watch(
   () => route.params.courseId,
   () => {
     isFavorite.value = false
+    isEnrolled.value = false
     loadCourseData()
   }
 )
-<<<<<<< HEAD
 </script>
-=======
-</script>
-
-<style scoped>
-.course-detail {
-  min-height: 100vh;
-}
-
-/* 课程头部样式 */
-.course-header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  padding: 40px 0;
-  margin-bottom: 30px;
-}
-
-.course-info {
-  max-width: 800px;
-}
-
-.course-category {
-  background: rgba(255,255,255,0.2);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  display: inline-block;
-  margin-bottom: 15px;
-}
-
-.course-info h1 {
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-.course-description {
-  font-size: 1rem;
-  margin-bottom: 20px;
-  opacity: 0.9;
-  line-height: 1.5;
-}
-
-.course-meta {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
-}
-
-.course-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.btn-primary {
-  background: #1a73e8;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #0d5bb9;
-}
-
-.btn-secondary {
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.3);
-}
-
-.btn-secondary:hover {
-  background: rgba(255,255,255,0.3);
-}
-
-.btn-secondary-active {
-  background: #ffc107;
-  color: #202124;
-  border-color: #ffc107;
-}
-
-/* 标签页样式 */
-.tabs {
-  display: flex;
-  background: white;
-  border-radius: 10px;
-  padding: 8px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  overflow-x: auto;
-}
-
-.tab {
-  padding: 12px 20px;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  font-size: 0.9rem;
-}
-
-.tab.active {
-  background: #e8f0fe;
-  color: #1a73e8;
-  font-weight: 600;
-}
-
-/* 内容区域样式 */
-.content-section {
-  background: white;
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-.section-title {
-  font-size: 1.3rem;
-  margin-bottom: 20px;
-  color: #202124;
-}
-
-/* 课程介绍样式 */
-.course-overview {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.overview-content {
-  line-height: 1.6;
-}
-
-.overview-content h3 {
-  margin: 15px 0 8px;
-  color: #202124;
-  font-size: 1rem;
-}
-
-.overview-content ul {
-  margin-left: 20px;
-  margin-bottom: 15px;
-}
-
-.overview-content li {
-  margin-bottom: 5px;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-top: 15px;
-}
-
-.feature-item {
-  text-align: center;
-  padding: 15px;
-  background: white;
-  border-radius: 6px;
-}
-
-.feature-icon {
-  font-size: 1.5rem;
-  color: #1a73e8;
-  margin-bottom: 8px;
-}
-
-.feature-item h4 {
-  font-size: 0.9rem;
-  margin-bottom: 5px;
-}
-
-.feature-item p {
-  font-size: 0.8rem;
-  color: #5f6368;
-}
-
-/* 章节样式 */
-.chapter {
-  margin-bottom: 20px;
-  border: 1px solid #dadce0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.chapter-header {
-  background: #f8f9fa;
-  padding: 15px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chapter-title {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
-}
-
-.chapter-content {
-  padding: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.chapter.active .chapter-content {
-  padding: 15px;
-  max-height: 1000px;
-}
-
-.lesson {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid #dadce0;
-}
-
-.lesson-clickable {
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 6px;
-  padding: 10px 8px;
-  margin: 0 -8px;
-}
-
-.lesson-clickable:hover {
-  background: #f8f9fa;
-  transform: translateX(4px);
-}
-
-.lesson:last-child {
-  border-bottom: none;
-}
-
-.lesson-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #e8f0fe;
-  color: #1a73e8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-}
-
-.lesson-info {
-  flex: 1;
-}
-
-.lesson-title {
-  font-weight: 500;
-  margin-bottom: 2px;
-  font-size: 0.9rem;
-}
-
-.lesson-meta {
-  font-size: 0.8rem;
-  color: #5f6368;
-}
-
-/* 讲师信息样式 */
-.instructor-card {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-
-.instructor-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1a73e8, #6c8ef5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.instructor-avatar-img {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.instructor-info h3 {
-  font-size: 1.1rem;
-  margin-bottom: 5px;
-}
-
-.instructor-title {
-  color: #1a73e8;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-}
-
-.instructor-stats {
-  display: flex;
-  gap: 15px;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #1a73e8;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: #5f6368;
-}
-
-/* 评价表单样式 */
-.review-form {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 30px;
-}
-
-.form-title {
-  font-size: 1.1rem;
-  margin-bottom: 15px;
-  color: #202124;
-}
-
-.rating-selector {
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rating-selector label {
-  font-weight: 500;
-  color: #5f6368;
-}
-
-.stars {
-  display: flex;
-  gap: 5px;
-}
-
-.star-icon {
-  font-size: 1.5rem;
-  color: #dadce0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.star-icon.active {
-  color: #f9ab00;
-}
-
-.star-icon:hover {
-  transform: scale(1.1);
-}
-
-.review-input {
-  margin-bottom: 15px;
-}
-
-.review-input label {
-  display: block;
-  font-weight: 500;
-  color: #5f6368;
-  margin-bottom: 8px;
-}
-
-.review-input textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #dadce0;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 100px;
-}
-
-.review-input textarea:focus {
-  outline: none;
-  border-color: #1a73e8;
-}
-
-.char-count {
-  text-align: right;
-  font-size: 0.8rem;
-  color: #5f6368;
-  margin-top: 5px;
-}
-
-.btn-submit {
-  background: #1a73e8;
-  color: white;
-  padding: 10px 24px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-submit:hover:not(:disabled) {
-  background: #0d5bb9;
-}
-
-.btn-submit:disabled {
-  background: #dadce0;
-  cursor: not-allowed;
-}
-
-/* 评价列表样式 */
-.reviews-grid {
-  display: grid;
-  gap: 15px;
-}
-
-.review-card {
-  padding: 15px;
-  border: 1px solid #dadce0;
-  border-radius: 8px;
-}
-
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  margin-bottom: 10px;
-}
-
-.reviewer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.reviewer-avatar {
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  background: #1a73e8;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
-.rating {
-  color: #f9ab00;
-  font-size: 0.9rem;
-}
-
-.review-content {
-  color: #202124;
-  line-height: 1.5;
-  font-size: 0.9rem;
-}
-
-/* 相关课程样式 */
-.related-courses {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 25px;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-@media (max-width: 768px) {
-  .course-meta {
-    gap: 15px;
-  }
-  
-  .course-actions {
-    flex-direction: column;
-  }
-  
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .related-courses {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba

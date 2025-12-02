@@ -7,11 +7,7 @@
       </div>
 
       <div class="nav-links">
-<<<<<<< HEAD
         <router-link to="/" class="nav-link">课程中心</router-link>
-=======
-        <router-link to="/search" class="nav-link">课程中心</router-link>
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
         <router-link to="/community" class="nav-link">学习社区</router-link>
       </div>
 
@@ -62,14 +58,9 @@ const avatar = computed(() => {
 const handleSearch = () => {
   const q = keyword.value.trim()
   if (!q) return
-<<<<<<< HEAD
   // 跳转到首页并传递搜索参数
   router.push({
     path: '/',
-=======
-  router.push({
-    path: '/search',
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
     query: { q }
   })
 }
@@ -81,11 +72,7 @@ const handleLogout = () => {
 }
 
 const goHome = () => {
-<<<<<<< HEAD
   router.push('/')
-=======
-  router.push('/search')
->>>>>>> e148202daefea14e2752f4b8e24e17b05c9485ba
 }
 
 const goToPersonalCenter = () => {

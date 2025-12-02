@@ -33,23 +33,29 @@ async function routeToCorrectCenter() {
     
     // 检查是否有token
     const token = localStorage.getItem('token')
+    console.log('🔍 PersonalCenterRouter - Token存在:', !!token)
     if (!token) {
       router.push('/login')
       return
     }
 
     // 获取用户信息
-    await userStore.fetchUserProfile()
+    console.log('🔍 PersonalCenterRouter - 开始获取用户信息...')
+    const profileData = await userStore.fetchUserProfile()
+    console.log('🔍 PersonalCenterRouter - API返回数据:', profileData)
     
     // 根据用户角色跳转
     const userRole = userStore.role
-    console.log('用户角色:', userRole)
+    console.log('🔍 PersonalCenterRouter - userStore.role:', userRole)
+    console.log('🔍 PersonalCenterRouter - 角色判断:', userRole === 'instructor' ? '教师' : '学生')
     
     if (userRole === 'instructor' || userRole === 'teacher') {
       // 教师跳转到教师中心
+      console.log('✅ 跳转到教师中心 /personal/teacher')
       router.replace('/personal/teacher')
     } else {
       // 学生跳转到学生中心
+      console.log('✅ 跳转到学生中心 /personal/student')
       router.replace('/personal/student')
     }
     
