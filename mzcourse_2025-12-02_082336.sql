@@ -130,6 +130,31 @@ CREATE TABLE `chapter_progress` (
 --
 
 /*!40000 ALTER TABLE `chapter_progress` DISABLE KEYS */;
+INSERT INTO `chapter_progress` (`id`, `user_id`, `chapter_id`, `progress_rate`, `completed_videos`, `total_videos`, `last_watched_at`, `created_at`, `updated_at`) VALUES
+(1, 6, 16, 85.00, 3, 4, NOW(), NOW(), NOW()),
+(2, 6, 17, 60.00, 2, 3, NOW(), NOW(), NOW()),
+(3, 6, 18, 30.00, 1, 3, NOW(), NOW(), NOW()),
+(4, 7, 16, 100.00, 4, 4, NOW(), NOW(), NOW()),
+(5, 7, 17, 75.00, 2, 3, NOW(), NOW(), NOW()),
+(6, 7, 18, 50.00, 2, 3, NOW(), NOW(), NOW()),
+(7, 8, 16, 45.00, 2, 4, NOW(), NOW(), NOW()),
+(8, 8, 17, 20.00, 1, 3, NOW(), NOW(), NOW()),
+(9, 9, 16, 90.00, 4, 4, NOW(), NOW(), NOW()),
+(10, 9, 17, 85.00, 3, 3, NOW(), NOW(), NOW()),
+(11, 9, 18, 70.00, 2, 3, NOW(), NOW(), NOW()),
+(12, 10, 16, 55.00, 2, 4, NOW(), NOW(), NOW()),
+(13, 10, 17, 40.00, 1, 3, NOW(), NOW(), NOW()),
+(14, 10, 18, 25.00, 1, 3, NOW(), NOW(), NOW()),
+(15, 6, 1, 70.00, 3, 5, NOW(), NOW(), NOW()),
+(16, 6, 2, 45.00, 2, 4, NOW(), NOW(), NOW()),
+(17, 7, 1, 95.00, 5, 5, NOW(), NOW(), NOW()),
+(18, 7, 2, 80.00, 3, 4, NOW(), NOW(), NOW()),
+(19, 7, 3, 60.00, 2, 4, NOW(), NOW(), NOW()),
+(20, 8, 1, 30.00, 1, 5, NOW(), NOW(), NOW()),
+(21, 9, 1, 100.00, 5, 5, NOW(), NOW(), NOW()),
+(22, 9, 2, 90.00, 4, 4, NOW(), NOW(), NOW()),
+(23, 9, 3, 75.00, 3, 4, NOW(), NOW(), NOW()),
+(24, 10, 1, 50.00, 2, 5, NOW(), NOW(), NOW());
 /*!40000 ALTER TABLE `chapter_progress` ENABLE KEYS */;
 
 --
@@ -864,6 +889,49 @@ CREATE TABLE `student_learning_log` (
 --
 
 /*!40000 ALTER TABLE `student_learning_log` DISABLE KEYS */;
+INSERT INTO `student_learning_log` (`id`, `user_id`, `course_id`, `video_id`, `action_type`, `action_detail`, `duration_seconds`, `timestamp`, `device_info`, `created_at`) VALUES
+(1, 6, 1, 1, 'focus', NULL, 1200, NOW(), NULL, NOW()),
+(2, 6, 1, 1, 'focus', NULL, 800, NOW(), NULL, NOW()),
+(3, 6, 1, 1, 'pause', NULL, 10, NOW(), NULL, NOW()),
+(4, 6, 1, 1, 'pause', NULL, 15, NOW(), NULL, NOW()),
+(5, 6, 1, 1, 'replay', NULL, 5, NOW(), NULL, NOW()),
+(6, 6, 1, 1, 'note', NULL, 30, NOW(), NULL, NOW()),
+(7, 6, 1, 1, 'note', NULL, 45, NOW(), NULL, NOW()),
+(8, 6, 1, 2, 'focus', NULL, 900, NOW(), NULL, NOW()),
+(9, 6, 1, 2, 'speed_change', NULL, 0, NOW(), NULL, NOW()),
+(10, 7, 1, 1, 'focus', NULL, 1500, NOW(), NULL, NOW()),
+(11, 7, 1, 1, 'focus', NULL, 1100, NOW(), NULL, NOW()),
+(12, 7, 1, 1, 'pause', NULL, 20, NOW(), NULL, NOW()),
+(13, 7, 1, 1, 'replay', NULL, 8, NOW(), NULL, NOW()),
+(14, 7, 1, 1, 'replay', NULL, 12, NOW(), NULL, NOW()),
+(15, 7, 1, 1, 'note', NULL, 60, NOW(), NULL, NOW()),
+(16, 7, 1, 2, 'focus', NULL, 800, NOW(), NULL, NOW()),
+(17, 7, 1, 2, 'question', NULL, 0, NOW(), NULL, NOW()),
+(18, 7, 1, 2, 'discuss', NULL, 120, NOW(), NULL, NOW()),
+(19, 8, 1, 1, 'focus', NULL, 600, NOW(), NULL, NOW()),
+(20, 8, 1, 1, 'pause', NULL, 30, NOW(), NULL, NOW()),
+(21, 8, 1, 1, 'pause', NULL, 25, NOW(), NULL, NOW()),
+(22, 8, 1, 1, 'leave', NULL, 0, NOW(), NULL, NOW()),
+(23, 8, 1, 2, 'focus', NULL, 400, NOW(), NULL, NOW()),
+(24, 8, 1, 2, 'confusion', NULL, 0, NOW(), NULL, NOW()),
+(25, 9, 2, 1, 'focus', NULL, 1000, NOW(), NULL, NOW()),
+(26, 9, 2, 1, 'note', NULL, 40, NOW(), NULL, NOW()),
+(27, 9, 2, 1, 'exercise', NULL, 300, NOW(), NULL, NOW()),
+(28, 9, 2, 2, 'focus', NULL, 700, NOW(), NULL, NOW()),
+(29, 9, 2, 2, 'review', NULL, 200, NOW(), NULL, NOW()),
+(30, 9, 2, 2, 'summary', NULL, 100, NOW(), NULL, NOW()),
+(31, 10, 2, 1, 'focus', NULL, 800, NOW(), NULL, NOW()),
+(32, 10, 2, 1, 'interact', NULL, 50, NOW(), NULL, NOW()),
+(33, 10, 2, 1, 'feedback', NULL, 0, NOW(), NULL, NOW()),
+(34, 10, 2, 2, 'focus', NULL, 500, NOW(), NULL, NOW()),
+(35, 10, 2, 2, 'think', NULL, 60, NOW(), NULL, NOW()),
+(36, 10, 2, 2, 'progress', NULL, 0, NOW(), NULL, NOW()),
+(37, 6, 2, 1, 'focus', NULL, 900, NOW(), NULL, NOW()),
+(38, 6, 2, 1, 'challenge', NULL, 0, NOW(), NULL, NOW()),
+(39, 6, 2, 1, 'interest', NULL, 0, NOW(), NULL, NOW()),
+(40, 7, 2, 1, 'focus', NULL, 1100, NOW(), NULL, NOW()),
+(41, 7, 2, 1, 'master', NULL, 0, NOW(), NULL, NOW()),
+(42, 7, 2, 1, 'understand', NULL, 0, NOW(), NULL, NOW());
 /*!40000 ALTER TABLE `student_learning_log` ENABLE KEYS */;
 
 --
