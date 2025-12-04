@@ -1,16 +1,21 @@
 <template>
   <div class="course-card" @click="handleCardClick">
-    <div class="course-image" :style="getImageStyle(course.image)">
-      <span class="course-difficulty">{{ course.difficulty }}</span>
-    </div>
-    <div class="course-content">
-      <h3 class="course-title">{{ course.title }}</h3>
-      <p class="course-description">{{ course.description }}</p>
-      <div class="course-meta">
-        <span class="instructor">{{ course.instructor }}</span>
-        <div class="course-stats">
-          <span class="stat"><i class="fas fa-users"></i> {{ course.students }}</span>
-          <span class="stat"><i class="fas fa-star"></i> {{ course.rating }}</span>
+    <div class="card-shell">
+      <div class="media-wrapper">
+        <div class="course-image" :style="getImageStyle(course.image)">
+          <div class="expand-icon" aria-hidden="true"><i class="fas fa-expand"></i></div>
+        </div>
+        <div class="avatar"><img :src="course.image" alt="avatar" v-if="course.image"/></div>
+      </div>
+
+      <div class="card-body">
+        <h3 class="course-title">{{ course.title }}</h3>
+        <div class="instructor">{{ course.instructor }}</div>
+
+        <div class="badges-row">
+          <div class="pill"><i class="fas fa-heart"></i> 22</div>
+          <div class="pill"><i class="fas fa-comment"></i> 12</div>
+          <div class="pill"><i class="fas fa-eye"></i> {{ course.students }}</div>
         </div>
       </div>
     </div>
@@ -33,108 +38,179 @@ const handleCardClick = () => {
   router.push(`/course/${props.course.id}`)
 }
 
+// 检测是否为常见的外部占位图域名
+const isPlaceholderDomain = (url) => {
+  if (!url || typeof url !== 'string') return false
+  const host = url.replace(/^https?:\/\//, '').split('/')[0]
+  const blocked = [
+    'via.placeholder.com',
+    'placehold.it',
+    'placehold.co'
+  ]
+  return blocked.some(b => host.includes(b))
+}
+
 const getImageStyle = (image) => {
-  if (!image) {
-    return {
-      background: 'linear-gradient(135deg, #667eea, #764ba2)'
-    }
+  let imageUrl = image
+  if (!imageUrl || isPlaceholderDomain(imageUrl)) {
+    // 使用本地回退图，避免外部占位图导致的 DNS/加载错误
+    imageUrl = '/default-course.svg'
   }
-  
-  // 如果是图片URL，使用backgroundImage
-  if (typeof image === 'string' && (image.startsWith('http') || image.startsWith('/'))) {
+
+  if (typeof imageUrl === 'string' && (imageUrl.startsWith('http') || imageUrl.startsWith('/'))) {
     return {
-      backgroundImage: `url(${image})`,
+      backgroundImage: `url(${imageUrl})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat'
     }
   }
-  
-  // 如果是渐变或其他CSS值，直接使用background
+
+  // 如果不是 URL，则回退为柔和渐变
   return {
-    background: image
+    background: 'linear-gradient(135deg, #eef7ff, #f7fbff)'
   }
 }
 </script>
 
 <style scoped>
-.course-card {
-  background: white;
+:root{
+  --primary: rgb(41,180,246); /* 更明亮的淡蓝色 */
+  --primary-dark: #12a7d9;
+  --card-bg: #f9fbfe; /* 更轻的卡片外壳 */
+  --panel-bg: #26292b; /* 媒体深色面板 */
+  --muted: #6f7377;
+}
+
+.course-card{
+  width:100%;
+  cursor:pointer;
+  display:block;
+}
+
+.card-shell{
+  background: var(--card-bg);
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 3px 15px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  width: 100%;
-  min-width: 0;
+  padding: 14px;
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+  box-shadow: 0 10px 0 rgba(0,0,0,0.04);
+  overflow: visible;
 }
 
-.course-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+.media-wrapper{
+  position:relative;
 }
 
-.course-image {
-  width: 100%;
-  height: 180px;
-  position: relative;
+.course-image{
+  background:#222;
+  height:200px;
+  border-radius:10px;
+  box-shadow: 0 8px 24px rgba(41,180,246,0.06) inset, 0 12px 30px rgba(0,0,0,0.20);
+  transition: transform 0.28s ease;
+  position:relative;
 }
 
-.course-difficulty {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: rgba(255,255,255,0.9);
-  padding: 4px 12px;
-  border-radius: 15px;
-  font-size: 12px;
-  font-weight: 500;
+.expand-icon{
+  position:absolute;
+  top:12px;
+  right:12px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.85);
+  padding:8px;
+  border-radius:8px;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.course-content {
-  padding: 20px;
+.avatar{
+  position:absolute;
+  left:18px;
+  bottom:-22px;
+  width:56px;
+  height:56px;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+  background: linear-gradient(135deg, rgba(41,180,246,0.12), rgba(18,167,217,0.06));
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.course-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #202124;
-  line-height: 1.4;
+.avatar img{ width:100%; height:100%; object-fit:cover; }
+
+.card-body{
+  padding: 28px 18px 18px 18px;
+  background: transparent;
 }
 
-.course-description {
-  color: #5f6368;
-  font-size: 0.9rem;
-  margin-bottom: 15px;
-  line-height: 1.5;
-  line-clamp: 2;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.course-title{
+  font-size:1.15rem;
+  font-weight:800;
+  color:#0b2b3b;
+  margin:0 0 6px 0;
 }
 
-.course-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #5f6368;
-  font-size: 0.85rem;
+.instructor{
+  color: rgba(11,43,59,0.85);
+  font-size:0.95rem;
+  margin-bottom:12px;
 }
 
-.instructor {
-  font-weight: 500;
+.badges-row{
+  display:flex;
+  gap:10px;
 }
 
-.course-stats {
-  display: flex;
-  gap: 15px;
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background: rgba(215, 230, 246, 0.829);
+  color: #f0f7fb;
+  padding:8px 12px;
+  border-radius:10px;
+  font-weight:700;
+  font-size:0.85rem;
+  box-shadow: 0 6px 14px rgba(41,180,246,0.06);
 }
 
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+/* .pill i{ color: rgba(255, 255, 255, 0.9); } */
+.pill:has(.fa-heart) i {
+  color: rgba(249, 72, 36, 0.934);
+}
+
+/* 评论 */
+.pill:has(.fa-comment) i {
+  color: rgba(251, 253, 253, 0.9);
+}
+
+/* 浏览 */
+.pill:has(.fa-eye) i {
+  color: rgba(43, 43, 43, 0.9); 
+}
+
+.card-shell .course-title, .card-shell .instructor, .card-shell .pill{ color: #0b2b3b; }
+
+.course-card:hover .card-shell{
+  transform: translateY(-6px) scale(1.005);
+  /* 更中性且柔和的悬停效果：几乎白色的浅渐变 + 轻微边框与阴影 */
+  box-shadow: 0 18px 36px rgba(11,45,70,0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,252,255,0.98));
+  border: 1px solid rgba(11,45,70,0.04);
+}
+
+.course-card:hover .course-image{
+  transform: scale(1.03);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.32);
+}
+
+.course-card:hover .card-body{ background: transparent; }
+
+@media (max-width:768px){
+  .course-image{ height:160px; }
+  .avatar{ width:48px; height:48px; bottom:-20px; }
 }
 </style>

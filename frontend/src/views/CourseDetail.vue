@@ -1,3 +1,4 @@
+<!-- 视频详情页 -->
 <template>
   <CourseDetailView
     :course="course"
@@ -205,10 +206,13 @@ const loadCourseData = async () => {
     ])
 
     const c = (courseRes && courseRes.data) || courseRes || {}
+    console.log('🔔 后端课程原始数据:', c)
     course.value = {
       id: c.course_id,
       title: c.course_name || '未命名课程',
       description: c.course_desc || '',
+      // 兼容后端字段 cover_img 或 image，保持与 CourseCard 使用的 `image` 字段一致
+      image: c.cover_img ? (c.cover_img.startsWith('http') ? c.cover_img : `${API_BASE}${c.cover_img}`) : (c.image || c.cover || ''),
       rating: c.rating || 0,
       reviewCount: c.rating_count || 0,
       studentCount: String(c.student_count || 0),
@@ -216,6 +220,7 @@ const loadCourseData = async () => {
       difficulty: c.difficulty_level || '初级',
       categoryName: c.category_name || '未分类'
     }
+    console.log('🔔 计算后前端 course.image:', course.value.image)
 
     // 解析章节信息
     const rawChapters = (chaptersRes && chaptersRes.data) || chaptersRes || []
@@ -274,13 +279,12 @@ const loadCourseData = async () => {
         description: rc.course_desc,
         instructor: rc.teacher_name || '未知讲师',
         students: String(rc.student_count || 0),
-        rating: rc.rating || 0,
-        difficulty: rc.difficulty_level || '初级',
-        image: rc.cover_img
-          ? (rc.cover_img.startsWith('http')
-              ? `url(${rc.cover_img})`
-              : `url(${API_BASE}${rc.cover_img})`)
-          : 'linear-gradient(135deg, #667eea, #764ba2)'
+          rating: rc.rating || 0,
+          difficulty: rc.difficulty_level || '初级',
+          // 与首页 CourseCard 保持一致：提供原始图片 URL（不包裹 `url(...)`），让 CourseCard 处理样式与回退
+          image: rc.cover_img
+            ? (rc.cover_img.startsWith('http') ? rc.cover_img : `${API_BASE}${rc.cover_img}`)
+            : (rc.image || rc.cover || '')
       }))
     } catch (err) {
       console.warn('获取相关课程失败:', err)

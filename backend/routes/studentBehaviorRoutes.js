@@ -24,4 +24,21 @@ router.get('/suggestions', studentBehaviorController.getLearningSuggestions);
 // 更新学习目标进度
 router.put('/goal/:goalId', studentBehaviorController.updateGoalProgress);
 
+// ==================== 倍速播放相关路由 ====================
+
+// 获取倍速播放使用情况
+router.get('/speed-usage', studentBehaviorController.getPlaybackSpeedUsage);
+
+// 获取课程倍速偏好
+router.get('/course/:courseId/speed-preference', studentBehaviorController.getCourseSpeedPreference);
+
+// 获取用户个人倍速习惯统计
+router.get('/speed-habits', studentBehaviorController.getUserSpeedHabits);
+
+// 获取倍速与学习效果关联分析
+router.get('/speed-learning-correlation', studentBehaviorController.getSpeedLearningCorrelation);
+
+// 批量获取多个课程倍速数据
+router.post('/batch-speed-analysis', studentBehaviorController.getBatchSpeedAnalysis);
+
 module.exports = router;

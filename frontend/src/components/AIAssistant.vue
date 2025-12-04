@@ -8,6 +8,11 @@
         <h3 style="font-size: 1.1rem;">AI学习助手</h3>
         <p style="font-size: 0.75rem; color: var(--gray);">实时分析课程内容，智能辅助学习</p>
       </div>
+      <div class="ai-header-actions">
+        <button class="btn btn-secondary btn-icon" @click="refreshTab" title="刷新当前内容">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
     </div>
     
     <div class="ai-tabs">
@@ -139,13 +144,10 @@ print(f"圆的面积: {result}")</code></pre>
         placeholder="向AI助手提问关于课程内容的问题..."
         @keypress.enter.prevent="handleQuestionSubmit"
       ></textarea>
-      <div>
+      <div class="ai-send">
         <button class="btn btn-primary" @click="handleQuestionSubmit" :disabled="!questionInput.trim()">
           <i class="fas fa-paper-plane"></i>
           发送
-        </button>
-        <button class="btn btn-secondary" @click="clearQuestion">
-          <i class="fas fa-sync-alt"></i>
         </button>
       </div>
     </div>
@@ -177,6 +179,23 @@ export default {
     const questionInput = ref('')
     const quizAnswers = ref({})
     const showAnswers = ref(false)
+    // 刷新当前标签内容
+    const refreshTab = async () => {
+      try {
+        if (activeTab.value === 'summary') {
+          aiSummary.value = {}
+        } else if (activeTab.value === 'highlights') {
+          aiHighlights.value = []
+        } else if (activeTab.value === 'quiz') {
+          aiQuizzes.value = []
+          quizAnswers.value = {}
+          showAnswers.value = false
+        }
+        await loadTabData(activeTab.value)
+      } catch (error) {
+        console.error('刷新内容失败:', error)
+      }
+    }
 
     // 计算属性
     const completedQuizzes = computed(() => {
@@ -329,6 +348,7 @@ export default {
       resetQuiz,
       handleQuestionSubmit,
       clearQuestion,
+      refreshTab,
       handleKeyPress
     }
   }
@@ -341,7 +361,7 @@ export default {
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 400px;
+  height: 800px;
 }
 
 .ai-header {
@@ -350,6 +370,19 @@ export default {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.ai-header-actions {
+  margin-left: auto;
+}
+
+.btn-icon {
+  padding: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ai-avatar {
@@ -533,21 +566,21 @@ code {
 }
 
 .ai-input-area {
-  padding: 15px;
+  padding: 12px 15px;
   border-top: 1px solid var(--border);
   display: flex;
   gap: 10px;
-  align-items: end;
+  align-items: center;
 }
 
 .ai-input {
   flex: 1;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
   resize: none;
-  height: 60px;
+  height: 50px;
   font-family: inherit;
 }
 
@@ -557,7 +590,7 @@ code {
 }
 
 .btn {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border: none;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -566,6 +599,15 @@ code {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+.ai-send {
+  display: flex;
+  align-items: center;
+}
+
+.ai-send .btn {
+  height: 40px;
+  border-radius: 10px;
 }
 
 .btn:disabled {

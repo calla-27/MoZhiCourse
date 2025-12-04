@@ -115,8 +115,9 @@ export const updateVideoProgress = (data) => {
   return request.post('/courses/video/progress', data)
 }
 
-// 学习行为记录API - 简化版本
+// 学习行为记录API
 export const recordLearningBehavior = (data) => {
+  console.log('📝 发送学习行为数据:', data)
   return request.post('/courses/video/behavior', data)
 }
 
@@ -188,8 +189,8 @@ export const createBehaviorRecorder = () => {
   }
 }
 
-// 工具函数：创建标准化的行为数据
-export const createStandardBehavior = (videoId, behaviorType, videoState = {}) => {
+// 修改createStandardBehavior函数，确保包含courseId
+export const createStandardBehavior = (videoId, courseId, behaviorType, videoState = {}) => {
   const {
     currentTime = 0,
     duration = 0,
@@ -199,6 +200,7 @@ export const createStandardBehavior = (videoId, behaviorType, videoState = {}) =
 
   return {
     videoId: parseInt(videoId),
+    courseId: parseInt(courseId),
     behaviorType,
     currentTime: Math.floor(currentTime),
     duration: Math.floor(duration),
@@ -208,42 +210,67 @@ export const createStandardBehavior = (videoId, behaviorType, videoState = {}) =
   }
 }
 
+// 添加一个专门记录倍速的函数
+export const recordSpeedChange = (videoId, courseId, speed, videoState = {}) => {
+  const behaviorData = {
+    videoId,
+    courseId,
+    behaviorType: 'speed_change',
+    playSpeed: parseFloat(speed),
+    currentTime: Math.floor(videoState.currentTime || 0),
+    duration: Math.floor(videoState.duration || 0),
+    progress: Math.floor(videoState.progress || 0),
+    timestamp: new Date().toISOString()
+  }
+  
+  console.log('🎚️ 记录倍速变化:', behaviorData)
+  return recordLearningBehavior(behaviorData)
+}
+
 // 预定义的行为记录函数
 export const BehaviorRecorder = {
   // 播放行为
-  recordPlay: (videoId, videoState) => {
-    const behaviorData = createStandardBehavior(videoId, BEHAVIOR_TYPES.PLAY, videoState)
+  recordPlay: (videoId, courseId, videoState) => {
+    const behaviorData = createStandardBehavior(videoId, courseId, 'play', videoState)
     return recordLearningBehavior(behaviorData)
   },
   
   // 暂停行为
-  recordPause: (videoId, videoState) => {
-    const behaviorData = createStandardBehavior(videoId, BEHAVIOR_TYPES.PAUSE, videoState)
+  recordPause: (videoId, courseId, videoState) => {
+    const behaviorData = createStandardBehavior(videoId, courseId, 'pause', videoState)
     return recordLearningBehavior(behaviorData)
   },
   
   // 完成行为
-  recordComplete: (videoId, videoState) => {
-    const behaviorData = createStandardBehavior(videoId, BEHAVIOR_TYPES.COMPLETE, videoState)
+  recordComplete: (videoId, courseId, videoState) => {
+    const behaviorData = createStandardBehavior(videoId, courseId, 'complete', videoState)
     return recordLearningBehavior(behaviorData)
   },
   
   // 跳转行为
-  recordSeek: (videoId, videoState, seekInfo = {}) => {
-    const behaviorData = createStandardBehavior(videoId, BEHAVIOR_TYPES.SEEK, {
+  recordSeek: (videoId, courseId, videoState, seekInfo = {}) => {
+    const behaviorData = createStandardBehavior(videoId, courseId, 'seek', {
       ...videoState,
       ...seekInfo
     })
     return recordLearningBehavior(behaviorData)
   },
   
-  // 速度变化行为
-  recordSpeedChange: (videoId, videoState, newSpeed) => {
-    const behaviorData = createStandardBehavior(videoId, BEHAVIOR_TYPES.SPEED_CHANGE, {
-      ...videoState,
-      playSpeed: newSpeed
-    })
-    return recordLearningBehavior(behaviorData)
+  // 倍速变化行为 - 专门记录倍速
+  recordSpeedChange: async (videoId, courseId, newSpeed, videoState = {}) => {
+    const behaviorData = {
+      videoId,
+      courseId,
+      behaviorType: 'speed_change',
+      playSpeed: parseFloat(newSpeed),
+      currentTime: Math.floor(videoState.currentTime || 0),
+      duration: Math.floor(videoState.duration || 0),
+      progress: Math.floor(videoState.progress || 0),
+      timestamp: new Date().toISOString()
+    }
+    
+    console.log('🎚️ 记录倍速变化:', behaviorData)
+    return await recordLearningBehavior(behaviorData)
   }
 }
 

@@ -161,12 +161,16 @@ exports.getBehaviorOverview = async (req, res) => {
     
     console.log('✅ 学习风格数据获取完成');
     
+    // 8. 获取用户倍速使用概况
+    const speedOverview = await getUserSpeedOverview(userId);
+    
     // 6. 返回真实数据
     const responseData = {
       enrolledCourses,
       overview,
       learningStyle,
-      coursePerformance: coursePerformanceData
+      coursePerformance: coursePerformanceData,
+      speedOverview  // 添加倍速数据
     };
     
     console.log('=== 📊 GET BEHAVIOR OVERVIEW END ===\n');
@@ -350,13 +354,17 @@ exports.getCourseAnalysis = async (req, res) => {
       LIMIT 1
     `, [userId, courseId]);
     
+    // 5. 获取该课程的倍速使用情况
+    const courseSpeedUsage = await getCourseSpeedUsage(userId, courseId);
+    
     res.json({
       success: true,
       data: {
         courseInfo,
         chapterProgress,
         focusData: focusData || [],
-        performance: performanceRows[0] || null
+        performance: performanceRows[0] || null,
+        speedUsage: courseSpeedUsage  // 添加倍速数据
       }
     });
     
@@ -523,3 +531,558 @@ exports.updateGoalProgress = async (req, res) => {
     });
   }
 };
+
+// ==================== 新增：倍速播放相关功能 ====================
+
+// 获取倍速播放使用情况
+// controllers/studentBehaviorController.js 中的 getPlaybackSpeedUsage 函数
+exports.getPlaybackSpeedUsage = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const rawCourseId = req.query.courseId;
+    
+    console.log(`⚡ 获取倍速使用情况 - 用户ID: ${userId}, 课程ID: ${rawCourseId || 'overall'}`);
+
+    // 更健壮的 courseId 处理
+    let courseId = null;
+    if (rawCourseId && rawCourseId !== 'overall' && rawCourseId !== 'null' && rawCourseId !== 'undefined') {
+      const parsed = parseInt(rawCourseId, 10);
+      if (!isNaN(parsed)) {
+        courseId = parsed;
+      }
+    }
+
+    console.log(`处理后的课程ID: ${courseId || '全部课程'}`);
+
+    // 使用 learning_detail 表来查询倍速数据
+    let query = `
+      SELECT 
+        play_speed,
+        COUNT(*) as usage_count,
+        SUM(learn_duration) as total_duration
+      FROM learning_detail
+      WHERE user_id = ? 
+        AND play_speed IS NOT NULL 
+        AND play_speed > 0
+    `;
+
+    const params = [userId];
+
+    if (courseId) {
+      query += ' AND course_id = ?';
+      params.push(courseId);
+    } else {
+      query += ' AND course_id IS NOT NULL';
+    }
+
+    query += ' GROUP BY play_speed ORDER BY play_speed';
+
+    console.log('执行SQL查询:', query);
+    console.log('查询参数:', params);
+
+    const [rows] = await pool.query(query, params);
+    
+    console.log('查询结果行数:', rows.length);
+    console.log('查询结果:', rows);
+
+    // 如果没有数据，返回空数组
+    if (!rows || rows.length === 0) {
+      console.log('没有查询到倍速使用数据');
+      return res.json({
+        success: true,
+        data: {
+          usage: [],
+          total: 0,
+          averageSpeed: 1.0,
+          mostUsedSpeed: { speed: 1.0, count: 0 },
+          distribution: []
+        }
+      });
+    }
+
+    // 处理数据
+    const usage = rows.map(row => {
+      const speed = parseFloat(row.play_speed);
+      const count = Number(row.usage_count) || 0;
+      
+      return {
+        speed: isNaN(speed) ? 1.0 : speed,
+        count: count,
+        total_duration: row.total_duration || 0
+      };
+    });
+
+    // 计算统计数据
+    const total = usage.reduce((sum, item) => sum + item.count, 0);
+    const averageSpeed = calculateAverageSpeed(usage);
+    const mostUsedSpeed = getMostUsedSpeed(usage);
+    const distribution = calculateSpeedDistribution(usage);
+
+    console.log('处理后的使用数据:', {
+      usageCount: usage.length,
+      total: total,
+      averageSpeed: averageSpeed,
+      mostUsedSpeed: mostUsedSpeed
+    });
+
+    res.json({
+      success: true,
+      data: {
+        usage: usage,
+        total: total,
+        averageSpeed: averageSpeed,
+        mostUsedSpeed: mostUsedSpeed,
+        distribution: distribution
+      }
+    });
+  } catch (error) {
+    console.error('获取倍速使用情况失败:', error);
+    console.error('错误堆栈:', error.stack);
+    
+    res.status(500).json({
+      success: false,
+      message: '获取倍速使用情况失败',
+      error: process.env.NODE_ENV === 'development' ? error.message : '服务器内部错误',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
+// 获取课程倍速偏好
+exports.getCourseSpeedPreference = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const courseId = req.params.courseId;
+
+    console.log(`📚 获取课程倍速偏好 - 用户ID: ${userId}, 课程ID: ${courseId}`);
+
+    const [rows] = await pool.query(`
+      SELECT 
+        play_speed,
+        COUNT(*) as usage_count,
+        AVG(focus_rate) as avg_focus_rate,
+        AVG(complete_rate) as avg_completion_rate
+      FROM user_behavior ub
+      LEFT JOIN learning_detail ld ON ub.user_id = ld.user_id 
+        AND ub.video_id = ld.video_id
+        AND DATE(ub.timestamp) = DATE(ld.learn_time)
+      WHERE ub.user_id = ? 
+        AND ub.course_id = ? 
+        AND ub.behavior_type = 'speed_change'
+      GROUP BY play_speed
+      ORDER BY usage_count DESC
+    `, [userId, courseId]);
+
+    res.json({
+      success: true,
+      data: {
+        preferences: rows,
+        courseId: courseId
+      }
+    });
+  } catch (error) {
+    console.error('获取课程倍速偏好失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取课程倍速偏好失败',
+      error: error.message
+    });
+  }
+};
+
+// 获取用户个人倍速习惯统计
+exports.getUserSpeedHabits = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const period = req.query.period || '30d';
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+
+    console.log(`⏰ 获取用户倍速习惯 - 用户ID: ${userId}, 周期: ${period}`);
+
+    // 获取倍速使用趋势
+    const [speedTrend] = await pool.query(`
+      SELECT 
+        DATE(timestamp) as date,
+        AVG(play_speed) as avg_speed,
+        COUNT(*) as speed_changes,
+        MIN(play_speed) as min_speed,
+        MAX(play_speed) as max_speed
+      FROM user_behavior
+      WHERE user_id = ? 
+        AND behavior_type = 'speed_change'
+        AND timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY DATE(timestamp)
+      ORDER BY date
+    `, [userId, days]);
+
+    // 获取不同时段的倍速偏好
+    const [timeSlotPref] = await pool.query(`
+      SELECT 
+        HOUR(timestamp) as hour_of_day,
+        AVG(play_speed) as avg_speed,
+        COUNT(*) as usage_count
+      FROM user_behavior
+      WHERE user_id = ? 
+        AND behavior_type = 'speed_change'
+        AND timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY HOUR(timestamp)
+      ORDER BY hour_of_day
+    `, [userId, days]);
+
+    // 获取最常用的倍速设置
+    const [mostUsedSpeeds] = await pool.query(`
+      SELECT 
+        play_speed,
+        COUNT(*) as usage_count
+      FROM user_behavior
+      WHERE user_id = ? 
+        AND behavior_type = 'speed_change'
+        AND timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY play_speed
+      ORDER BY usage_count DESC
+      LIMIT 5
+    `, [userId, days]);
+
+    res.json({
+      success: true,
+      data: {
+        speedTrend,
+        timeSlotPreference: timeSlotPref,
+        mostUsedSpeeds,
+        period: period
+      }
+    });
+  } catch (error) {
+    console.error('获取用户倍速习惯失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取用户倍速习惯失败',
+      error: error.message
+    });
+  }
+};
+
+// 获取倍速与学习效果关联分析
+exports.getSpeedLearningCorrelation = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const rawCourseId = req.query.courseId;
+    const courseId = !Number.isNaN(parseInt(rawCourseId, 10)) ? parseInt(rawCourseId, 10) : null;
+
+    console.log(`📈 获取倍速与学习效果关联 - 用户ID: ${userId}, 课程ID: ${courseId || '全部'}`);
+
+    let query = `
+      SELECT 
+        ub.play_speed,
+        COUNT(*) as session_count,
+        AVG(ld.focus_rate) as avg_focus_rate,
+        AVG(ld.complete_rate) as avg_completion_rate,
+        AVG(ld.learn_duration) as avg_duration,
+        COUNT(DISTINCT DATE(ub.timestamp)) as study_days
+      FROM user_behavior ub
+      LEFT JOIN learning_detail ld ON ub.user_id = ld.user_id 
+        AND ub.video_id = ld.video_id
+        AND DATE(ub.timestamp) = DATE(ld.learn_time)
+      WHERE ub.user_id = ? 
+        AND ub.behavior_type = 'speed_change'
+    `;
+
+    const params = [userId];
+
+    if (courseId) {
+      query += ' AND ub.course_id = ?';
+      params.push(courseId);
+    }
+
+    query += ' GROUP BY ub.play_speed ORDER BY ub.play_speed';
+
+    const [rows] = await pool.query(query, params);
+
+    // 计算相关性分析
+    const analysis = analyzeSpeedLearningCorrelation(rows);
+
+    res.json({
+      success: true,
+      data: {
+        rawData: rows,
+        analysis: analysis,
+        courseId: courseId
+      }
+    });
+  } catch (error) {
+    console.error('获取倍速与学习效果关联失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取倍速与学习效果关联失败',
+      error: error.message
+    });
+  }
+};
+
+// 批量获取多个课程倍速数据
+exports.getBatchSpeedAnalysis = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { courseIds } = req.body;
+
+    if (!Array.isArray(courseIds) || courseIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供有效的课程ID数组'
+      });
+    }
+
+    console.log(`📊 批量获取课程倍速分析 - 用户ID: ${userId}, 课程数: ${courseIds.length}`);
+
+    const results = await Promise.all(
+      courseIds.map(async (courseId) => {
+        try {
+          const [speedData] = await pool.query(`
+            SELECT 
+              play_speed,
+              COUNT(*) as usage_count
+            FROM user_behavior
+            WHERE user_id = ? 
+              AND course_id = ?
+              AND behavior_type = 'speed_change'
+            GROUP BY play_speed
+          `, [userId, courseId]);
+
+          const [courseInfo] = await pool.query(`
+            SELECT course_name FROM course WHERE course_id = ?
+          `, [courseId]);
+
+          return {
+            courseId,
+            courseName: courseInfo[0]?.course_name || `课程${courseId}`,
+            speedData: speedData,
+            totalChanges: speedData.reduce((sum, item) => sum + item.usage_count, 0),
+            averageSpeed: calculateAverageSpeed(speedData)
+          };
+        } catch (error) {
+          console.error(`处理课程 ${courseId} 时出错:`, error);
+          return {
+            courseId,
+            courseName: `课程${courseId}`,
+            speedData: [],
+            totalChanges: 0,
+            averageSpeed: 1.0,
+            error: error.message
+          };
+        }
+      })
+    );
+
+    // 计算整体统计数据
+    const overallStats = {
+      totalCourses: results.length,
+      totalSpeedChanges: results.reduce((sum, item) => sum + item.totalChanges, 0),
+      averageSpeedAcrossCourses: results.length > 0 
+        ? results.reduce((sum, item) => sum + item.averageSpeed, 0) / results.length 
+        : 0
+    };
+
+    res.json({
+      success: true,
+      data: {
+        results,
+        overallStats
+      }
+    });
+  } catch (error) {
+    console.error('批量获取课程倍速分析失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '批量获取课程倍速分析失败',
+      error: error.message
+    });
+  }
+};
+
+// ==================== 辅助函数 ====================
+// 修改 getCourseSpeedUsage 辅助函数
+async function getCourseSpeedUsage(userId, courseId) {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        play_speed,
+        COUNT(*) as usage_count,
+        SUM(learn_duration) as total_duration
+      FROM learning_detail
+      WHERE user_id = ? 
+        AND course_id = ?
+        AND play_speed IS NOT NULL
+        AND play_speed > 0
+      GROUP BY play_speed
+      ORDER BY play_speed
+    `, [userId, courseId]);
+
+    return rows.map(row => ({
+      speed: parseFloat(row.play_speed),
+      count: row.usage_count,
+      total_duration: row.total_duration
+    }));
+  } catch (error) {
+    console.error('获取课程倍速使用情况失败:', error);
+    return [];
+  }
+}
+
+// 修改 getUserSpeedOverview 辅助函数
+async function getUserSpeedOverview(userId) {
+  try {
+    // 获取整体倍速使用数据 - 从 learning_detail 表
+    const [overallUsage] = await pool.query(`
+      SELECT 
+        AVG(play_speed) as average_speed,
+        COUNT(*) as total_changes,
+        MIN(play_speed) as min_speed,
+        MAX(play_speed) as max_speed,
+        SUM(learn_duration) as total_duration
+      FROM learning_detail
+      WHERE user_id = ? 
+        AND play_speed IS NOT NULL
+        AND play_speed > 0
+    `, [userId]);
+
+    // 获取最常用的3个倍速
+    const [topSpeeds] = await pool.query(`
+      SELECT 
+        play_speed,
+        COUNT(*) as usage_count,
+        SUM(learn_duration) as total_duration
+      FROM learning_detail
+      WHERE user_id = ? 
+        AND play_speed IS NOT NULL
+        AND play_speed > 0
+      GROUP BY play_speed
+      ORDER BY usage_count DESC
+      LIMIT 3
+    `, [userId]);
+
+    // 获取倍速使用趋势（最近7天）
+    const [trendData] = await pool.query(`
+      SELECT 
+        DATE(learn_time) as date,
+        AVG(play_speed) as avg_speed,
+        COUNT(*) as changes_count,
+        SUM(learn_duration) as total_duration
+      FROM learning_detail
+      WHERE user_id = ? 
+        AND play_speed IS NOT NULL
+        AND play_speed > 0
+        AND learn_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY DATE(learn_time)
+      ORDER BY date
+    `, [userId]);
+
+    return {
+      overall: overallUsage[0] || {
+        average_speed: 1.0,
+        total_changes: 0,
+        min_speed: 1.0,
+        max_speed: 1.0,
+        total_duration: 0
+      },
+      topSpeeds: topSpeeds,
+      trend: trendData
+    };
+  } catch (error) {
+    console.error('获取用户倍速概况失败:', error);
+    return null;
+  }
+}
+
+// 计算平均倍速（辅助函数）
+function calculateAverageSpeed(usageData) {
+  if (!usageData || usageData.length === 0) return 1.0;
+  
+  const totalWeight = usageData.reduce((sum, item) => sum + item.count, 0);
+  if (totalWeight === 0) return 1.0;
+  
+  const weightedSum = usageData.reduce((sum, item) => {
+    return sum + (item.speed * item.count);
+  }, 0);
+  
+  return weightedSum / totalWeight;
+}
+
+// 获取最常用倍速（辅助函数）
+function getMostUsedSpeed(usageData) {
+  if (!usageData || usageData.length === 0) return { speed: 1.0, count: 0 };
+  
+  return usageData.reduce((max, item) => {
+    return item.count > max.count ? item : max;
+  }, { speed: 1.0, count: 0 });
+}
+
+// 计算倍速分布百分比（辅助函数）
+function calculateSpeedDistribution(usageData) {
+  if (!usageData || usageData.length === 0) return [];
+  
+  const total = usageData.reduce((sum, item) => sum + item.count, 0);
+  if (total === 0) return [];
+  
+  return usageData.map(item => ({
+    speed: item.speed,
+    count: item.count,
+    percentage: Math.round((item.count / total) * 100)
+  }));
+}
+
+// 分析倍速与学习效果的相关性（辅助函数）
+function analyzeSpeedLearningCorrelation(data) {
+  if (!data || data.length < 2) {
+    return {
+      correlation: '数据不足',
+      suggestions: ['需要更多数据来进行相关性分析']
+    };
+  }
+  
+  // 提取数据点
+  const speeds = data.map(item => parseFloat(item.play_speed));
+  const focusRates = data.map(item => parseFloat(item.avg_focus_rate) || 0);
+  const completionRates = data.map(item => parseFloat(item.avg_completion_rate) || 0);
+  
+  // 计算相关性（简单实现）
+  const focusCorrelation = calculateCorrelation(speeds, focusRates);
+  const completionCorrelation = calculateCorrelation(speeds, completionRates);
+  
+  // 生成建议
+  const suggestions = [];
+  
+  if (focusCorrelation < -0.5) {
+    suggestions.push('高倍速可能影响专注度，建议在重要内容学习时使用正常速度');
+  }
+  
+  if (completionCorrelation < -0.3) {
+    suggestions.push('过高倍速可能降低学习完成率，建议根据学习内容调整速度');
+  }
+  
+  if (focusCorrelation > 0.3) {
+    suggestions.push('您对某些速度的专注度较高，可以继续保持这些速度的学习');
+  }
+  
+  return {
+    focusCorrelation: focusCorrelation.toFixed(2),
+    completionCorrelation: completionCorrelation.toFixed(2),
+    suggestions: suggestions.length > 0 ? suggestions : ['倍速与学习效果无明显相关性，保持当前学习习惯即可']
+  };
+}
+
+// 计算相关系数（辅助函数）
+function calculateCorrelation(x, y) {
+  if (x.length !== y.length || x.length < 2) return 0;
+  
+  const n = x.length;
+  const sumX = x.reduce((a, b) => a + b, 0);
+  const sumY = y.reduce((a, b) => a + b, 0);
+  const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+  const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+  const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+  
+  const numerator = n * sumXY - sumX * sumY;
+  const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  
+  return denominator !== 0 ? numerator / denominator : 0;
+}
