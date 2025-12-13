@@ -6,47 +6,135 @@ const path = require('path');
 // 获取用户个人信息
 const getUserProfile = async (req, res) => {
   try {
+    console.log('🔍 [getUserProfile] 开始获取用户信息，用户ID:', req.user.userId);
+    console.log('🔍 从req.user中获取的token角色信息:', req.user.role);
+    console.log('🔍 完整的req.user对象:', JSON.stringify(req.user, null, 2));
+    
     const userId = req.user.userId;
     const user = await UserModel.findById(userId);
 
     if (!user) {
+      console.log('❌ 用户不存在:', userId);
       return res.status(404).json({ success: false, message: '用户不存在' });
     }
 
+    // 详细打印用户对象的所有字段
+    console.log('✅ 数据库用户对象完整内容:', JSON.stringify(user, null, 2));
+    console.log('✅ 数据库用户角色字段值:', user.role);
+    console.log('✅ 数据库用户角色字段类型:', typeof user.role);
+    console.log('✅ 数据库用户角色字段是否存在:', 'role' in user);
+
+    // 确定最终角色：优先使用数据库中的角色，如果为空则使用token中的角色
+    const finalRole = user.role || req.user.role || 'learner';
+    console.log('🎯 最终确定的用户角色:', finalRole);
+    console.log('🎯 角色来源:', 
+      user.role ? '数据库' : 
+      req.user.role ? 'JWT Token' : '默认值(learner)'
+    );
+
     // 从 user_detail 读取个性签名等扩展信息
     const [detailRows] = await execute(
-      'SELECT user_intro FROM user_detail WHERE user_id = ?',
+      'SELECT user_intro, occupation FROM user_detail WHERE user_id = ?',
       [userId]
     );
     const detail = detailRows?.[0] || {};
+    console.log('📝 用户详细信息:', detail);
 
-    // 简化的学习统计数据
+    // 查询已报名课程数量（is_enrolled=1）
+    console.log('📚 查询已报名课程数量...');
+    const [enrolledCoursesResult] = await execute(
+      'SELECT COUNT(*) as count FROM user_course WHERE user_id = ? AND is_enrolled = 1',
+      [userId]
+    );
+    
+    const enrolledCount = enrolledCoursesResult[0]?.count || 0;
+    console.log('📊 已报名课程数量:', enrolledCount);
+    
+    // 查询已完成课程数量（进度>=100）
+    const [completedCoursesResult] = await execute(
+      'SELECT COUNT(*) as count FROM user_course WHERE user_id = ? AND progress >= 100 AND is_enrolled = 1',
+      [userId]
+    );
+    const completedCount = completedCoursesResult[0]?.count || 0;
+    console.log('🎯 已完成课程数量:', completedCount);
+    
+    // 查询总学习时长（从 learning_detail 表）
+    console.log('⏱️ 查询总学习时长...');
+    const [learningHoursResult] = await execute(
+      `SELECT COALESCE(SUM(learn_duration)/3600, 0) as hours 
+       FROM learning_detail 
+       WHERE user_id = ?`,
+      [userId]
+    );
+    const totalHours = parseFloat(learningHoursResult[0]?.hours || 0);
+    console.log('🕒 总学习时长(小时):', totalHours);
+    
+    // 查询连续学习天数
+    console.log('📅 查询连续学习天数...');
+    const [continuousDaysResult] = await execute(
+      `SELECT 
+        COUNT(DISTINCT DATE(learn_time)) as days
+       FROM learning_detail 
+       WHERE user_id = ? 
+         AND learn_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
+      [userId]
+    );
+    const continuousDays = continuousDaysResult[0]?.days || 0;
+    console.log('🔥 连续学习天数:', continuousDays);
+    
+    // 查询获得的成就数量
+    const [achievementsResult] = await execute(
+      'SELECT COUNT(*) as count FROM user_achievement WHERE user_id = ?',
+      [userId]
+    );
+    const achievementsCount = achievementsResult[0]?.count || 0;
+    console.log('🏆 获得成就数量:', achievementsCount);
+
+    // 学习统计数据
     const learningStats = {
-      total_learning_hours: 0,
-      enrolled_courses: 0,
-      courses_completed: 0,
-      continuous_days: 0,
-      achievement_rate: 0
+      total_learning_hours: totalHours,
+      enrolled_courses: enrolledCount,
+      courses_completed: completedCount,
+      continuous_days: continuousDays,
+      achievements_earned: achievementsCount,
+      achievement_rate: enrolledCount > 0 ? 
+        Math.round((completedCount / enrolledCount) * 100) : 0
     };
+
+    console.log('📈 最终学习统计数据:', JSON.stringify(learningStats, null, 2));
+
+    // 构建返回数据，确保role字段始终存在且有正确值
+    const responseData = {
+      userId: user.user_id,
+      userName: user.user_name,
+      email: user.email,
+      avatarUrl: user.avatar_url,
+      role: finalRole, // 使用最终确定的角色
+      registerTime: user.register_time,
+      lastLoginTime: user.last_login_time,
+      userIntro: detail.user_intro || '',
+      occupation: detail.occupation || null,
+      learningStats
+    };
+
+    console.log('📤 返回给前端的用户数据:', JSON.stringify(responseData, null, 2));
+    console.log('📤 返回数据中的角色字段:', responseData.role);
 
     res.json({
       success: true,
-      data: {
-        userId: user.user_id,
-        userName: user.user_name,
-        email: user.email,
-        avatarUrl: user.avatar_url,
-        role: user.role,
-        registerTime: user.register_time,
-        lastLoginTime: user.last_login_time,
-        userIntro: detail.user_intro || '',
-        learningStats
-      }
+      data: responseData
     });
 
+    console.log('✅ [getUserProfile] 用户信息获取完成');
+
   } catch (error) {
-    console.error('获取用户信息失败:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
+    console.error('❌ 获取用户信息失败:', error);
+    console.error('❌ 错误堆栈:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      message: '服务器错误',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

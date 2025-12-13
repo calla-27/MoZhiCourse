@@ -3,7 +3,7 @@ const router = express.Router();
 const teacherCenterController = require('../controllers/teacherCenterController');
 const personalCenterController = require('../controllers/personalCenterController');
 const { authMiddleware, checkRole } = require('../middleware/auth');
-const { uploadAvatar } = require('../middleware/upload');
+const { uploadAvatar, uploadVideo } = require('../middleware/upload');
 
 // 所有教师中心路由都需要教师权限
 const requireTeacher = [authMiddleware, checkRole('instructor', 'teacher')];
@@ -29,6 +29,9 @@ router.get('/stats', requireTeacher, teacherCenterController.getTeacherStats);
 // 获取教师课程列表
 router.get('/courses', requireTeacher, teacherCenterController.getTeacherCourses);
 
+// 获取单个课程详情（用于编辑）
+router.get('/courses/:courseId', requireTeacher, teacherCenterController.getCourseDetail);
+
 // 创建新课程
 router.post('/courses', requireTeacher, teacherCenterController.createCourse);
 
@@ -41,5 +44,28 @@ router.delete('/courses/:courseId', requireTeacher, teacherCenterController.dele
 // ==================== 学生管理相关 ====================
 // 获取课程学生列表
 router.get('/courses/:courseId/students', requireTeacher, teacherCenterController.getCourseStudents);
+
+// ==================== 数据分析相关 ====================
+// 获取学生知识掌握分布（环状图）
+router.get('/analytics/mastery-distribution', requireTeacher, teacherCenterController.getKnowledgeMasteryDistribution);
+
+// 获取知识点词云数据
+router.get('/analytics/knowledge-wordcloud', requireTeacher, teacherCenterController.getKnowledgeWordCloud);
+
+// 获取学习趋势数据
+router.get('/analytics/learning-trend', requireTeacher, teacherCenterController.getLearningTrendData);
+
+// 获取趋势概览
+router.get('/analytics/trend-overview', requireTeacher, teacherCenterController.getTrendOverview);
+
+// ==================== 章节和视频管理 ====================
+// 创建章节
+router.post('/courses/:courseId/chapters', requireTeacher, teacherCenterController.createChapter);
+
+// 上传视频文件
+router.post('/upload/video', requireTeacher, uploadVideo, teacherCenterController.uploadVideo);
+
+// 创建视频记录
+router.post('/chapters/:chapterId/videos', requireTeacher, teacherCenterController.createVideo);
 
 module.exports = router;

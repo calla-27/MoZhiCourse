@@ -175,6 +175,8 @@ class Course {
   static async getCourseReviews(courseId, limit = 10) {
     // 先尝试从课程评价表获取
     try {
+      const limitInt = Number.isFinite(Number(limit)) ? parseInt(limit, 10) : 10;
+      console.log('🔎 getCourseReviews params:', { courseId, limit: limitInt });
       const [courseReviews] = await pool.execute(
         `SELECT 
           cr.review_id as comment_id,
@@ -188,18 +190,20 @@ class Course {
          INNER JOIN user u ON cr.user_id = u.user_id
          WHERE cr.course_id = ?
          ORDER BY cr.created_at DESC
-         LIMIT ?`,
-        [courseId, limit]
+         LIMIT ${limitInt}`,
+        [courseId]
       );
-      
+
       if (courseReviews.length > 0) {
         return courseReviews;
       }
     } catch (err) {
-      console.log('课程评价表不存在，尝试从视频评论聚合');
+      console.log('课程评价表不存在，尝试从视频评论聚合', err.message);
     }
     
     // 如果课程评价表没有数据，从视频评论聚合
+    const limitInt2 = Number.isFinite(Number(limit)) ? parseInt(limit, 10) : 10;
+    console.log('🔎 getCourseReviews (video fallback) params:', { courseId, limit: limitInt2 });
     const [reviews] = await pool.execute(
       `SELECT 
         vc.comment_id,
@@ -214,8 +218,8 @@ class Course {
        INNER JOIN user u ON vc.user_id = u.user_id
        WHERE cc.course_id = ?
        ORDER BY vc.created_time DESC
-       LIMIT ?`,
-      [courseId, limit]
+       LIMIT ${limitInt2}`,
+      [courseId]
     );
     return reviews;
   }
@@ -235,26 +239,28 @@ class Course {
     let courses = [];
     
     // 1. 优先推荐同分类的其他课程
-    if (categoryId) {
-      const [sameCategoryCourses] = await pool.execute(
-        `SELECT 
-          c.course_id,
-          c.course_name,
-          c.course_desc,
-          c.cover_img,
-          c.difficulty_level,
-          c.rating,
-          u.user_name as teacher_name,
-          c.student_count
-         FROM course c
-         LEFT JOIN user u ON c.teacher_user_id = u.user_id
-         WHERE c.category_id = ? AND c.course_id != ? AND c.is_online = 1
-         ORDER BY c.rating DESC, c.student_count DESC
-         LIMIT ?`,
-        [categoryId, courseId, limit]
-      );
-      courses = sameCategoryCourses;
-    }
+      const limitInt = Number.isFinite(Number(limit)) ? parseInt(limit, 10) : 4;
+      if (categoryId) {
+        console.log('🔎 getRelatedCourses (same category) params:', { categoryId, courseId, limit: limitInt });
+        const [sameCategoryCourses] = await pool.execute(
+          `SELECT 
+            c.course_id,
+            c.course_name,
+            c.course_desc,
+            c.cover_img,
+            c.difficulty_level,
+            c.rating,
+            u.user_name as teacher_name,
+            c.student_count
+           FROM course c
+           LEFT JOIN user u ON c.teacher_user_id = u.user_id
+           WHERE c.category_id = ? AND c.course_id != ? AND c.is_online = 1
+           ORDER BY c.rating DESC, c.student_count DESC
+           LIMIT ${limitInt}`,
+          [categoryId, courseId]
+        );
+        courses = sameCategoryCourses;
+      }
     
     // 2. 如果同分类课程不够，补充热门课程
     if (courses.length < limit) {
@@ -263,6 +269,7 @@ class Course {
       const excludeIds = [courseId, ...existingIds];
       
       const placeholders = excludeIds.map(() => '?').join(',');
+      console.log('🔎 getRelatedCourses (popular) params:', { excludeIds, remainingLimit });
       const [popularCourses] = await pool.execute(
         `SELECT 
           c.course_id,
@@ -277,8 +284,8 @@ class Course {
          LEFT JOIN user u ON c.teacher_user_id = u.user_id
          WHERE c.course_id NOT IN (${placeholders}) AND c.is_online = 1
          ORDER BY c.rating DESC, c.student_count DESC
-         LIMIT ?`,
-        [...excludeIds, remainingLimit]
+         LIMIT ${remainingLimit}`,
+        [...excludeIds]
       );
       
       courses = [...courses, ...popularCourses];
@@ -291,6 +298,7 @@ class Course {
       const excludeIds = [courseId, ...existingIds];
       
       const placeholders = excludeIds.map(() => '?').join(',');
+      console.log('🔎 getRelatedCourses (latest) params:', { excludeIds, remainingLimit });
       const [latestCourses] = await pool.execute(
         `SELECT 
           c.course_id,
@@ -305,8 +313,8 @@ class Course {
          LEFT JOIN user u ON c.teacher_user_id = u.user_id
          WHERE c.course_id NOT IN (${placeholders}) AND c.is_online = 1
          ORDER BY c.created_time DESC
-         LIMIT ?`,
-        [...excludeIds, remainingLimit]
+         LIMIT ${remainingLimit}`,
+        [...excludeIds]
       );
       
       courses = [...courses, ...latestCourses];

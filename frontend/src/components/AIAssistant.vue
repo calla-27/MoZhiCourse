@@ -1,594 +1,575 @@
 <template>
-  <div class="ai-section">
-    <div class="ai-header">
-      <div class="ai-avatar">
-        <i class="fas fa-robot"></i>
-      </div>
-      <div>
-        <h3 style="font-size: 1.1rem;">AI学习助手</h3>
-        <p style="font-size: 0.75rem; color: var(--gray);">实时分析课程内容，智能辅助学习</p>
-      </div>
-    </div>
-    
-    <div class="ai-tabs">
-      <div 
-        class="ai-tab" 
-        :class="{ active: activeTab === 'summary' }" 
-        @click="switchTab('summary')"
-      >
-        智能总结
-      </div>
-      <div 
-        class="ai-tab" 
-        :class="{ active: activeTab === 'highlights' }" 
-        @click="switchTab('highlights')"
-      >
-        重点标记
-      </div>
-      <div 
-        class="ai-tab" 
-        :class="{ active: activeTab === 'quiz' }" 
-        @click="switchTab('quiz')"
-      >
-        即时测验
-      </div>
-    </div>
-    
-    <div class="ai-content">
-      <!-- 智能总结 -->
-      <div v-if="activeTab === 'summary'" class="ai-tab-content active">
-        <div class="ai-column">
-          <div class="ai-card">
-            <h4>📝 内容摘要</h4>
-            <p>{{ aiSummary.content_summary || '加载中...' }}</p>
-          </div>
-          <div class="ai-card">
-            <h4>🎯 学习目标</h4>
-            <p v-html="formatLearningObjectives(aiSummary.learning_objectives)"></p>
-          </div>
+  <div class="ai-assistant-container">
+    <!-- 对话历史 -->
+    <div class="conversation-history" ref="historyRef">
+      <!-- 欢迎消息 -->
+      <div v-if="conversation.length === 0" class="welcome-message">
+        <div class="avatar">
+          <i class="fas fa-robot"></i>
         </div>
-        <div class="ai-column">
-          <div class="ai-card">
-            <h4>💡 难点解析</h4>
-            <p>{{ aiSummary.key_takeaways || '加载中...' }}</p>
-          </div>
-          <div class="ai-card">
-            <h4>⚠️ 注意事项</h4>
-            <p>函数可以返回多个值，实际上是返回一个元组。如果没有return语句，函数默认返回None。</p>
+        <div class="content">
+          <div class="text">你好！我是小墨，你的课程学习助手。我可以帮你：</div>
+          <ul class="welcome-features">
+            <li>📖 解释课程知识点</li>
+            <li>🎯 解答学习疑问</li>
+            <li>💡 提供学习建议</li>
+            <li>📝 总结课程内容</li>
+          </ul>
+          <div class="quick-questions">
+            <div class="quick-title">试试问我：</div>
+            <div class="quick-buttons">
+              <button v-for="(question, index) in quickQuestions" 
+                      :key="index"
+                      @click="sendQuickQuestion(question)"
+                      class="quick-btn">
+                {{ question }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
       
-      <!-- 重点标记 -->
-      <div v-if="activeTab === 'highlights'" class="ai-tab-content">
-        <div class="ai-column">
-          <div class="ai-card">
-            <h4>⏰ 关键时间点</h4>
-            <ul class="highlight-list">
-              <li v-for="highlight in aiHighlights" :key="highlight.highlight_id">
-                <span class="highlight-time">{{ formatTime(highlight.timestamp_seconds) }}</span>
-                <span>{{ highlight.description }}</span>
-              </li>
-            </ul>
-          </div>
+      <!-- 对话历史列表 -->
+      <div v-for="(msg, index) in conversation" :key="index" 
+           :class="['message', msg.role]">
+        <div class="avatar">
+          <i :class="msg.role === 'user' ? 'fas fa-user' : 'fas fa-robot'"></i>
         </div>
-        <div class="ai-column">
-          <div class="ai-card">
-            <h4>💻 代码示例</h4>
-            <pre><code>def calculate_area(radius):
-    pi = 3.14159
-    area = pi * radius ** 2
-    return area
-
-result = calculate_area(5)
-print(f"圆的面积: {result}")</code></pre>
+        <div class="content">
+          <div class="text" v-html="formatMessage(msg.content)"></div>
+          <div class="meta">
+            <span class="time">{{ formatTime(msg.timestamp) }}</span>
+            <div class="actions" v-if="msg.role === 'assistant'">
+              <button @click="copyToClipboard(msg.content)" title="复制">
+                <i class="fas fa-copy"></i>
+              </button>
+              <button @click="regenerateResponse(index)" title="重新生成">
+                <i class="fas fa-redo"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
       
-      <!-- 即时测验 -->
-      <div v-if="activeTab === 'quiz'" class="ai-tab-content">
-        <div class="ai-column">
-          <div 
-            v-for="quiz in aiQuizzes" 
-            :key="quiz.quiz_id" 
-            class="quiz-item"
-            :class="{ answered: getQuizAnswer(quiz.quiz_id) }"
-          >
-            <div class="quiz-question">{{ quiz.question_text }}</div>
-            <div class="quiz-options">
-              <div 
-                v-for="option in quiz.options" 
-                :key="option.option_id"
-                class="quiz-option"
-                :class="{
-                  selected: getSelectedOption(quiz.quiz_id) === option.option_id,
-                  correct: showAnswers && option.is_correct,
-                  incorrect: showAnswers && getSelectedOption(quiz.quiz_id) === option.option_id && !option.is_correct
-                }"
-                @click="selectOption(quiz.quiz_id, option.option_id, option.is_correct)"
-              >
-                {{ option.option_text }}
-              </div>
-            </div>
-            <div v-if="showAnswers && getQuizAnswer(quiz.quiz_id)" class="quiz-feedback">
-              {{ getQuizAnswer(quiz.quiz_id).isCorrect ? '✅ 回答正确！' : '❌ 回答错误，请再想想' }}
-            </div>
-          </div>
+      <!-- 加载状态 -->
+      <div v-if="isLoading" class="message assistant loading">
+        <div class="avatar">
+          <i class="fas fa-robot"></i>
         </div>
-        <div class="ai-column">
-          <div class="ai-card">
-            <h4>📊 测验统计</h4>
-            <p>已完成: {{ completedQuizzes }}/{{ aiQuizzes.length }}</p>
-            <p>正确率: {{ correctRate }}%</p>
-            <button class="btn btn-primary" @click="checkAnswers" :disabled="completedQuizzes === 0">
-              检查答案
-            </button>
-            <button class="btn btn-secondary" @click="resetQuiz">
-              重新开始
-            </button>
+        <div class="content">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
         </div>
       </div>
     </div>
     
-    <div class="ai-input-area">
-      <textarea 
-        v-model="questionInput" 
-        class="ai-input" 
-        placeholder="向AI助手提问关于课程内容的问题..."
-        @keypress.enter.prevent="handleQuestionSubmit"
-      ></textarea>
-      <div>
-        <button class="btn btn-primary" @click="handleQuestionSubmit" :disabled="!questionInput.trim()">
-          <i class="fas fa-paper-plane"></i>
-          发送
-        </button>
-        <button class="btn btn-secondary" @click="clearQuestion">
-          <i class="fas fa-sync-alt"></i>
-        </button>
+    <!-- 输入区域 -->
+    <div class="input-container">
+      <div class="input-wrapper">
+        <textarea
+          v-model="userInput"
+          @keydown.enter.prevent="handleEnterKey"
+          placeholder="向小墨提问关于这个视频的问题..."
+          :disabled="isLoading"
+          rows="2"
+        ></textarea>
+        <div class="input-actions">
+          <button @click="clearConversation" title="清空对话" :disabled="isLoading || conversation.length === 0">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button @click="sendMessage" :disabled="!userInput.trim() || isLoading" class="send-btn">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { ref, onMounted, computed, watch } from 'vue'
-import { getAISummary, getAIHighlights, getAIQuiz, submitAIQuestion } from '@/api/courseVideo'
+<script setup>
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { chatDeepSeek } from '@/api/deepseek'
 
-export default {
-  name: 'AIAssistant',
-  props: {
-    videoId: {
-      type: Number,
-      required: true
-    },
-    courseId: {
-      type: Number,
-      required: true
+const props = defineProps({
+  videoId: Number,
+  courseId: Number,
+  currentTime: Number,
+  videoTitle: String,
+  courseName: String
+})
+
+const emit = defineEmits(['question-submit'])
+
+/* ---------- 响应式状态 ---------- */
+const userInput = ref('')
+const conversation = ref([])
+const isLoading = ref(false)
+const error = ref(null)
+const historyRef = ref(null)
+
+/* ---------- 快捷问题 ---------- */
+const quickQuestions = [
+  '这个视频的主要内容是什么？',
+  '这个知识点怎么理解？',
+  '帮我总结一下重点',
+  '有没有相关的练习题？',
+  '这个技术在什么场景下使用？'
+]
+
+/* ---------- 方法 ---------- */
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (historyRef.value) {
+      historyRef.value.scrollTop = historyRef.value.scrollHeight
     }
-  },
-  emits: ['ask-question'],
-  setup(props) {
-    const activeTab = ref('summary')
-    const aiSummary = ref({})
-    const aiHighlights = ref([])
-    const aiQuizzes = ref([])
-    const questionInput = ref('')
-    const quizAnswers = ref({})
-    const showAnswers = ref(false)
+  })
+}
 
-    // 计算属性
-    const completedQuizzes = computed(() => {
-      return Object.keys(quizAnswers.value).length
+const sendMessage = async () => {
+  const message = userInput.value.trim()
+  if (!message || isLoading.value) return
+  
+  // 添加用户消息到对话历史
+  const userMessage = {
+    role: 'user',
+    content: message,
+    timestamp: Date.now()
+  }
+  conversation.value.push(userMessage)
+  userInput.value = ''
+  
+  // 滚动到底部
+  scrollToBottom()
+  
+  try {
+    isLoading.value = true
+    
+    // 构建系统提示词
+    const systemPrompt = `你是课程学习助手"小墨"，请用中文回答问题。
+当前课程：${props.courseName || '未知课程'}
+当前视频：${props.videoTitle || '未知视频'}
+请根据课程内容帮助学生解答问题，回答要简洁明了。`
+
+    // 构建消息数组
+    const messages = [
+      { role: "system", content: systemPrompt }
+    ]
+    
+    // 添加历史对话（最近5轮）
+    const recentHistory = conversation.value.slice(-11, -1) // 排除刚添加的用户消息
+    recentHistory.forEach(msg => {
+      messages.push({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      })
     })
+    
+    // 添加当前问题
+    messages.push({ role: "user", content: message })
 
-    const correctRate = computed(() => {
-      if (completedQuizzes.value === 0) return 0
-      const correctCount = Object.values(quizAnswers.value).filter(answer => answer.isCorrect).length
-      return Math.round((correctCount / completedQuizzes.value) * 100)
-    })
-
-    // 切换标签页
-    const switchTab = (tabName) => {
-      activeTab.value = tabName
-      loadTabData(tabName)
-    }
-
-    // 加载标签页数据
-    const loadTabData = async (tabName) => {
-      try {
-        switch (tabName) {
-          case 'summary':
-            if (Object.keys(aiSummary.value).length === 0) {
-              const summaryRes = await getAISummary(props.videoId)
-              aiSummary.value = summaryRes.data
-            }
-            break
-          case 'highlights':
-            if (aiHighlights.value.length === 0) {
-              const highlightsRes = await getAIHighlights(props.videoId)
-              aiHighlights.value = highlightsRes.data
-            }
-            break
-          case 'quiz':
-            if (aiQuizzes.value.length === 0) {
-              const quizRes = await getAIQuiz(props.videoId)
-              aiQuizzes.value = quizRes.data
-            }
-            break
-        }
-      } catch (error) {
-        console.error(`加载${tabName}数据失败:`, error)
+    console.log('🤖 发送AI请求:', messages)
+    
+    // 直接调用 DeepSeek API
+    const response = await chatDeepSeek(messages, 0.7)
+    console.log('🤖 AI响应:', response)
+    
+    if (response && response.success && response.data) {
+      // 添加AI回复到对话历史
+      const aiMessage = {
+        role: 'assistant',
+        content: response.data,
+        timestamp: Date.now()
       }
-    }
-
-    // 格式化学习目标
-    const formatLearningObjectives = (objectives) => {
-      if (!objectives) return '加载中...'
-      return objectives.split('\n').map(obj => `• ${obj}`).join('<br>')
-    }
-
-    // 格式化时间
-    const formatTime = (seconds) => {
-      const mins = Math.floor(seconds / 60)
-      const secs = Math.floor(seconds % 60)
-      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-    }
-
-    // 测验相关方法
-    const selectOption = (quizId, optionId, isCorrect) => {
-      if (showAnswers.value) return
-      
-      quizAnswers.value[quizId] = {
-        selectedOption: optionId,
-        isCorrect: isCorrect
+      conversation.value.push(aiMessage)
+    } else {
+      // 添加错误消息
+      const errorMessage = {
+        role: 'assistant',
+        content: response?.msg || '抱歉，AI服务暂时不可用，请稍后再试。',
+        timestamp: Date.now(),
+        isError: true
       }
+      conversation.value.push(errorMessage)
     }
-
-    const getSelectedOption = (quizId) => {
-      return quizAnswers.value[quizId]?.selectedOption
+    
+    scrollToBottom()
+    
+  } catch (err) {
+    console.error('发送消息失败:', err)
+    const errorMessage = {
+      role: 'assistant',
+      content: '网络连接失败，请检查网络后重试。',
+      timestamp: Date.now(),
+      isError: true
     }
+    conversation.value.push(errorMessage)
+    scrollToBottom()
+  } finally {
+    isLoading.value = false
+  }
+}
 
-    const getQuizAnswer = (quizId) => {
-      return quizAnswers.value[quizId]
-    }
+const sendQuickQuestion = (question) => {
+  userInput.value = question
+  sendMessage()
+}
 
-    const checkAnswers = () => {
-      showAnswers.value = true
-    }
+const handleEnterKey = (event) => {
+  if (event.shiftKey) {
+    // Shift+Enter 换行
+    return
+  }
+  // Enter 发送
+  event.preventDefault()
+  sendMessage()
+}
 
-    const resetQuiz = () => {
-      quizAnswers.value = {}
-      showAnswers.value = false
-    }
+const clearConversation = () => {
+  conversation.value = []
+  error.value = null
+}
 
-    // AI问答
-    const handleQuestionSubmit = async () => {
-      if (!questionInput.value.trim()) return
-      
-      try {
-        const response = await submitAIQuestion({
-          videoId: props.videoId,
-          question: questionInput.value.trim()
-        })
-        
-        // 显示AI回答
-        alert(`AI助手回答：\n\n${response.data.answer}`)
-        questionInput.value = ''
-      } catch (error) {
-        console.error('提交问题失败:', error)
-        alert('提问失败，请稍后重试')
-      }
-    }
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(() => {
+    // 可以添加复制成功的提示
+    console.log('已复制到剪贴板')
+  }).catch(err => {
+    console.error('复制失败:', err)
+  })
+}
 
-    const clearQuestion = () => {
-      questionInput.value = ''
-    }
-
-    const handleKeyPress = (event) => {
-      if (event.key === 'Enter' && event.ctrlKey) {
-        handleQuestionSubmit()
-      }
-    }
-
-    // 监听视频ID变化
-    watch(() => props.videoId, (newVideoId) => {
-      // 重置数据
-      aiSummary.value = {}
-      aiHighlights.value = []
-      aiQuizzes.value = []
-      quizAnswers.value = {}
-      showAnswers.value = false
-      questionInput.value = ''
-      
-      // 重新加载当前标签页数据
-      loadTabData(activeTab.value)
-    })
-
-    onMounted(() => {
-      loadTabData(activeTab.value)
-    })
-
-    return {
-      activeTab,
-      aiSummary,
-      aiHighlights,
-      aiQuizzes,
-      questionInput,
-      showAnswers,
-      completedQuizzes,
-      correctRate,
-      switchTab,
-      formatLearningObjectives,
-      formatTime,
-      selectOption,
-      getSelectedOption,
-      getQuizAnswer,
-      checkAnswers,
-      resetQuiz,
-      handleQuestionSubmit,
-      clearQuestion,
-      handleKeyPress
+const regenerateResponse = (index) => {
+  // 重新生成指定位置的回复
+  if (index > 0 && conversation.value[index].role === 'assistant') {
+    const previousUserMessage = conversation.value[index - 1]
+    if (previousUserMessage.role === 'user') {
+      // 移除当前AI回复
+      conversation.value.splice(index, 1)
+      // 重新提问
+      userInput.value = previousUserMessage.content
+      sendMessage()
     }
   }
 }
+
+const formatMessage = (content) => {
+  // 简单的Markdown转换
+  return content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+}
+
+const formatTime = (timestamp) => {
+  const date = new Date(timestamp)
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+}
+
+/* ---------- 生命周期 ---------- */
+onMounted(() => {
+  scrollToBottom()
+})
+
+// 监听videoId变化，重置对话
+watch(() => props.videoId, () => {
+  clearConversation()
+})
 </script>
 
 <style scoped>
-.ai-section {
-  background: white;
-  border-top: 1px solid var(--border);
+.ai-assistant-container {
   display: flex;
   flex-direction: column;
-  height: 400px;
+  height: 100%;
+  background: #f8f9fa;
 }
 
-.ai-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border);
+.conversation-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: white;
+}
+
+.welcome-message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f7ff, #e3eeff);
+  border-radius: 12px;
+  border-left: 4px solid var(--primary-color, #1a73e8);
+}
+
+.welcome-message .avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--primary-color, #1a73e8);
+  color: white;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.ai-avatar {
+.welcome-features {
+  margin: 12px 0;
+  padding-left: 20px;
+  color: #5f6368;
+  font-size: 0.9rem;
+}
+
+.welcome-features li {
+  margin-bottom: 6px;
+  padding-left: 4px;
+}
+
+.quick-questions {
+  margin-top: 16px;
+}
+
+.quick-title {
+  font-size: 0.85rem;
+  color: #5f6368;
+  margin-bottom: 8px;
+}
+
+.quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-btn {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #dadce0;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  color: #5f6368;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-btn:hover {
+  background: #f0f7ff;
+  border-color: var(--primary-color, #1a73e8);
+  color: var(--primary-color, #1a73e8);
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message.user .content {
+  background: #e3eeff;
+  border-radius: 12px 12px 0 12px;
+}
+
+.message.assistant .content {
+  background: #f8f9fa;
+  border-radius: 12px 12px 12px 0;
+  border: 1px solid #e9ecef;
+}
+
+.message.user .avatar {
+  background: #4285f4;
+}
+
+.message.assistant .avatar {
+  background: #34a853;
+}
+
+.message.avatar {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #6c8ef5);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1rem;
+  flex-shrink: 0;
 }
 
-.ai-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-}
-
-.ai-tab {
-  flex: 1;
-  text-align: center;
+.message.content {
+  max-width: 80%;
   padding: 12px;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  font-size: 0.9rem;
 }
 
-.ai-tab.active {
-  border-bottom-color: var(--primary);
-  color: var(--primary);
+.message.user .content {
+  margin-left: auto;
 }
 
-.ai-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 15px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
+.message.assistant .content {
+  margin-right: auto;
 }
 
-.ai-column {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.ai-card {
-  background: var(--light);
-  border-radius: 8px;
-  padding: 15px;
-  border-left: 3px solid var(--primary);
-}
-
-.ai-card h4 {
-  margin-bottom: 8px;
-  color: var(--primary);
-  font-size: 0.95rem;
-}
-
-.ai-card p {
+.message .text {
   line-height: 1.5;
-  color: var(--dark);
-  font-size: 0.85rem;
-}
-
-.highlight-list {
-  list-style: none;
-}
-
-.highlight-list li {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-}
-
-.highlight-list li:last-child {
-  border-bottom: none;
-}
-
-.highlight-time {
-  background: var(--primary-light);
-  color: var(--primary);
-  padding: 3px 6px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  min-width: 45px;
-  text-align: center;
-}
-
-pre {
-  background: #f6f8fa;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  overflow-x: auto;
-  margin: 0;
-  line-height: 1.4;
-}
-
-code {
-  font-family: 'Courier New', monospace;
-  color: #24292e;
-}
-
-.quiz-item {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.quiz-item:hover {
-  border-color: var(--primary);
-  box-shadow: 0 2px 6px rgba(26, 115, 232, 0.1);
-}
-
-.quiz-item.answered {
-  border-color: var(--primary);
-  background: var(--primary-light);
-}
-
-.quiz-question {
-  font-weight: 500;
-  margin-bottom: 8px;
   font-size: 0.9rem;
+  color: #202124;
+  word-break: break-word;
 }
 
-.quiz-options {
-  display: grid;
-  gap: 6px;
-}
-
-.quiz-option {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
+.message .text code {
+  background: #f1f3f4;
+  padding: 2px 4px;
   border-radius: 4px;
-  font-size: 0.8rem;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
 }
 
-.quiz-option:hover {
-  background: var(--primary-light);
-  border-color: var(--primary);
-}
-
-.quiz-option.selected {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.quiz-option.correct {
-  background: #e6f4ea;
-  border-color: var(--secondary);
-  color: var(--secondary);
-}
-
-.quiz-option.incorrect {
-  background: #fce8e6;
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.quiz-feedback {
-  margin-top: 8px;
-  padding: 8px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.ai-input-area {
-  padding: 15px;
-  border-top: 1px solid var(--border);
+.message .meta {
   display: flex;
-  gap: 10px;
-  align-items: end;
-}
-
-.ai-input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  resize: none;
-  height: 60px;
-  font-family: inherit;
-}
-
-.ai-input:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-.btn {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 5px;
+  margin-top: 8px;
 }
 
-.btn:disabled {
-  opacity: 0.6;
+.message .time {
+  font-size: 0.75rem;
+  color: #5f6368;
+}
+
+.message .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.message .actions button {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #5f6368;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.message .actions button:hover {
+  background: #e9ecef;
+  color: var(--primary-color, #1a73e8);
+}
+
+.message.loading .content {
+  background: transparent;
+  border: none;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background: #5f6368;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
+}
+
+.input-container {
+  padding: 16px;
+  border-top: 1px solid #dadce0;
+  background: white;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.input-wrapper textarea {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: none;
+  min-height: 44px;
+  max-height: 120px;
+  transition: all 0.2s ease;
+}
+
+.input-wrapper textarea:focus {
+  outline: none;
+  border-color: var(--primary-color, #1a73e8);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+}
+
+.input-wrapper textarea:disabled {
+  background: #f8f9fa;
   cursor: not-allowed;
 }
 
-.btn-primary {
-  background: var(--primary);
+.input-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-actions button {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #f8f9fa;
+  color: #5f6368;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.input-actions button:hover:not(:disabled) {
+  background: #e9ecef;
+  color: var(--primary-color, #1a73e8);
+}
+
+.input-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-actions .send-btn {
+  background: var(--primary-color, #1a73e8);
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
+.input-actions .send-btn:hover:not(:disabled) {
   background: #0d5bb9;
-}
-
-.btn-secondary {
-  background: var(--light);
-  color: var(--dark);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--primary-light);
 }
 </style>

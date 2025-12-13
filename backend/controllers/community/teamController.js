@@ -25,10 +25,10 @@ const teamController = {
             );
             
             // 提取并去重标签
-           const allTags = new Set();
+            const allTags = new Set();
             tagsResult.forEach(row => {
                 if (!row.tags) return;
-  
+
                 try {
                     let tags = [];
     
@@ -50,19 +50,19 @@ const teamController = {
                         if (tag && tag !== 'null' && tag !== 'undefined') {
                             allTags.add(tag);
                         }
-                        });
-                    } catch (e) {
-                        console.log('标签解析失败，跳过:', row.tags);
-                    }
-                });
+                    });
+                } catch (e) {
+                    console.log('标签解析失败，跳过:', row.tags);
+                }
+            });
 
-                // 转换为数组
-                const uniqueTags = Array.from(allTags);
+            // 转换为数组
+            const uniqueTags = Array.from(allTags);
             
             console.log('获取可用数据成功:', {
                 users: users.length,
                 courses: courses.length,
-                tags: allTags.length
+                tags: uniqueTags.length
             });
             
             res.json({
@@ -70,7 +70,7 @@ const teamController = {
                 data: {
                     users,
                     courses,
-                    tags: allTags
+                    tags: uniqueTags
                 }
             });
         } catch (error) {
@@ -250,7 +250,7 @@ const teamController = {
         try {
             const { teamId } = req.params;
             const { current_user_id } = req.query;
-            
+
             const team = await StudyTeam.findById(teamId);
 
             if (!team) {
@@ -262,8 +262,24 @@ const teamController = {
 
             const members = await TeamMember.getTeamMembers(teamId);
 
-            // 添加是否是当前用户创建的标志
-            team.is_owner = team.creator_id === parseInt(current_user_id);
+            // 当前用户 ID
+            const currentUserId = current_user_id ? parseInt(current_user_id) : null;
+
+            // 标记是否为创建者
+            team.is_owner = currentUserId ? (team.creator_id === currentUserId) : false;
+
+            // 当前成员数
+            const currentMembers = Array.isArray(members) ? members.length : 0;
+
+            // 当前用户是否在小组中
+            let isJoined = false;
+            if (currentUserId && Array.isArray(members)) {
+                isJoined = members.some(m => m.user_id === currentUserId);
+            }
+
+            // 兼容前端期望字段
+            team.current_members = currentMembers;
+            team.is_joined = isJoined;
 
             res.json({
                 success: true,
@@ -294,37 +310,45 @@ const teamController = {
                 });
             }
 
-            // 检查小组是否存在且活跃
+            // 检查小组是否存在
             const team = await StudyTeam.findById(teamId);
-            if (!team || team.status !== 'active') {
+            if (!team) {
                 return res.status(404).json({
                     success: false,
-                    message: '学习小组不存在或已关闭'
-                });
-            }
-
-            // 检查是否已满员
-            if (team.current_members >= team.max_members) {
-                return res.status(400).json({
-                    success: false,
-                    message: '学习小组已满员'
+                    message: '学习小组不存在'
                 });
             }
 
             // 检查用户是否已在小组中
-            const isAlreadyMember = await TeamMember.isUserInTeam(teamId, user_id);
-            if (isAlreadyMember) {
+            const [existingMember] = await execute(
+                'SELECT member_id FROM team_member WHERE team_id = ? AND user_id = ?',
+                [teamId, user_id]
+            );
+
+            if (existingMember && existingMember.length > 0) {
                 return res.status(400).json({
                     success: false,
                     message: '您已在该学习小组中'
                 });
             }
 
+            // 检查小组是否已满
+            const members = await TeamMember.getTeamMembers(teamId);
+            const currentMembers = Array.isArray(members) ? members.length : 0;
+            
+            if (currentMembers >= team.max_members) {
+                return res.status(400).json({
+                    success: false,
+                    message: '该学习小组人数已满'
+                });
+            }
+
+            // 加入小组
             await TeamMember.addMember(teamId, user_id, 'member');
 
             res.json({
                 success: true,
-                message: '申请加入学习小组成功，等待组长审核'
+                message: '已成功加入学习小组'
             });
         } catch (error) {
             console.error('加入小组错误:', error);

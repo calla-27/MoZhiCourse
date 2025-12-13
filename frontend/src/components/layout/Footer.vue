@@ -3,7 +3,7 @@
     <div class="container">
       <div class="footer-content">
         <div class="footer-section">
-          <h3>关于iCoursera</h3>
+          <h3><i class="fas fa-graduation-cap"></i> 墨知课堂</h3>
           <p>AI赋能的个性化在线教育平台，致力于让每个人都能享受优质教育资源。</p>
         </div>
         <div class="footer-section">
@@ -33,7 +33,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2024 iCoursera AI+在线教育平台. 保留所有权利.</p>
+        <p>&copy; 2025 墨知课堂 AI+在线教育平台. 保留所有权利.</p>
       </div>
     </div>
   </footer>

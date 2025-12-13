@@ -15,39 +15,80 @@
     <!-- 个人头部 -->
     <div class="container">
       <div class="profile-header">
+        <!-- 背景装饰 -->
+        <div class="profile-bg-decoration">
+          <div class="decoration-circle circle-1"></div>
+          <div class="decoration-circle circle-2"></div>
+          <div class="decoration-circle circle-3"></div>
+        </div>
+        
         <button class="settings-btn" title="账户设置" @click="showSettings=true">
           <i class="fas fa-cog"></i>
         </button>
         <button class="edit-profile-btn" title="编辑个人资料" @click="showEditProfile=true">
           <i class="fas fa-user-edit"></i>
         </button>
-        <div class="profile-avatar" @click="showAvatar=true">
-          <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.userName"/>
-          <span v-else>{{ user.userName?.charAt(0) || '学' }}</span>
-          <div class="avatar-edit-overlay"><i class="fas fa-camera"></i></div>
-        </div>
-        <div class="profile-info">
-          <h1>{{ user.userName || '未设置用户名' }}</h1>
-          <p>{{ user.occupation || '持续学习者' }}</p>
-          <div class="profile-bio">
-            {{ user.userIntro || '这个人很懒，什么都没有写～' }}
+        
+        <!-- 左侧：头像区域 -->
+        <div class="profile-left">
+          <div class="profile-avatar" @click="showAvatar=true">
+            <img v-if="user.avatarUrl" :src="user.avatarUrl" :alt="user.userName"/>
+            <span v-else>{{ user.userName?.charAt(0) || '学' }}</span>
+            <div class="avatar-edit-overlay"><i class="fas fa-camera"></i></div>
+            <!-- 在线状态指示 -->
+            <div class="online-indicator"></div>
           </div>
-          <div class="profile-stats">
-            <div class="stat-item">
-              <div class="stat-value">{{ user.learningStats?.total_learning_hours || 0 }}h</div>
-              <div class="stat-label">学习时长</div>
+          <!-- 用户等级徽章 -->
+          <div class="user-level">
+            <i class="fas fa-star"></i>
+            <span>Lv.{{ userLevel }}</span>
+          </div>
+        </div>
+        
+        <!-- 右侧：用户信息 -->
+        <div class="profile-info">
+          <div class="profile-name-row">
+            <h1>{{ user.userName || '未设置用户名' }}</h1>
+            <!-- 身份标签 -->
+            <div class="user-badges">
+              <span class="badge badge-learner"><i class="fas fa-graduation-cap"></i> 学习者</span>
+              <span v-if="user.learningStats?.continuous_days >= 7" class="badge badge-streak">
+                <i class="fas fa-fire"></i> {{ user.learningStats?.continuous_days }}天连续
+              </span>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ user.learningStats?.courses_completed || 0 }}</div>
-              <div class="stat-label">已学课程</div>
+          </div>
+          <p class="user-title">{{ user.occupation || '持续学习者' }}</p>
+          
+          <!-- 个性签名 - 美化版 -->
+          <div class="profile-bio-wrapper">
+            <span class="quote-mark quote-left">"</span>
+            <div class="profile-bio">
+              {{ user.userIntro || '这个人很懒，什么都没有写～' }}
             </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ user.learningStats?.achievements_earned || 0 }}</div>
-              <div class="stat-label">获得成就</div>
+            <span class="quote-mark quote-right">"</span>
+          </div>
+          
+          <!-- 快捷统计 -->
+          <div class="profile-quick-stats">
+            <div class="quick-stat">
+              <i class="fas fa-clock"></i>
+              <span class="stat-num">{{ user.learningStats?.total_learning_hours || 0 }}</span>
+              <span class="stat-unit">小时</span>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ user.learningStats?.continuous_days || 0 }}</div>
-              <div class="stat-label">连续学习</div>
+            <div class="quick-stat">
+              <i class="fas fa-book-open"></i>
+              <span class="stat-num">{{ user.learningStats?.enrolled_courses || 0 }}</span>
+              <span class="stat-unit">课程</span>
+            </div>
+            <div class="quick-stat">
+              <i class="fas fa-trophy"></i>
+              <span class="stat-num">{{ achievements.length || 0 }}</span>
+              <span class="stat-unit">成就</span>
+            </div>
+            <div class="quick-stat">
+              <i class="fas fa-heart"></i>
+              <span class="stat-num">{{ collectList.length || 0 }}</span>
+              <span class="stat-unit">收藏</span>
             </div>
           </div>
         </div>
@@ -80,7 +121,7 @@
         
         <div class="stats-grid">
           <div class="stat-card"><div class="value">{{ user.learningStats?.total_learning_hours || 0 }}h</div><div class="label">总学习时长</div></div>
-          <div class="stat-card"><div class="value">{{ user.learningStats?.courses_completed || 0 }}</div><div class="label">已学课程</div></div>
+          <div class="stat-card"><div class="value">{{ user.learningStats?.enrolled_courses || 0 }}</div><div class="label">已学课程</div></div>
           <div class="stat-card"><div class="value">{{ user.learningStats?.continuous_days || 0 }}</div><div class="label">连续学习天数</div></div>
           <div class="stat-card"><div class="value">{{ user.learningStats?.achievement_rate || 0 }}%</div><div class="label">成就达成率</div></div>
         </div>
@@ -141,7 +182,7 @@
 
       <!-- 4. 我的社区 -->
       <section v-if="activeTab === 'community'" class="content-section">
-        <h2 class="section-title">我的社区 <button class="more-btn">探索更多 <i class="fas fa-chevron-right"></i></button></h2>
+        <h2 class="section-title">我的社区 <button class="more-btn" @click="goToCommunity">探索更多 <i class="fas fa-chevron-right"></i></button></h2>
         <!-- 社区统计 -->
         <div class="community-stats">
           <div class="stat-card"><div class="value">3</div><div class="label">活跃组队</div></div>
@@ -202,6 +243,9 @@ const router = useRouter()
 
 /* 用户状态 */
 const user = useUserStore()
+// 公共 API 基址和 token 获取
+const API_BASE = 'http://localhost:4000'
+const getToken = () => localStorage.getItem('token')
 const showAvatar = ref(false)
 const showSettings = ref(false)
 const showEditProfile = ref(false)
@@ -224,6 +268,20 @@ const libraryList = ref([]) // 新增：学习库列表
 const communityData = ref({})
 const achievements = ref([])
 
+/* 计算用户等级 - 基于学习时长 */
+const userLevel = ref(1)
+const calculateLevel = () => {
+  const hours = user.learningStats?.total_learning_hours || 0
+  if (hours >= 500) userLevel.value = 10
+  else if (hours >= 300) userLevel.value = 8
+  else if (hours >= 150) userLevel.value = 6
+  else if (hours >= 80) userLevel.value = 5
+  else if (hours >= 40) userLevel.value = 4
+  else if (hours >= 20) userLevel.value = 3
+  else if (hours >= 10) userLevel.value = 2
+  else userLevel.value = 1
+}
+
 /* 方法 */
 
 // 跳转到课程
@@ -235,16 +293,18 @@ const goToBehaviorAnalysis = () => {
   router.push('/personal/learning-analysis/behavior')
 }
 
+const goToCommunity = () => {
+  router.push('/community')
+}
+
 // 从学习库移除
 const removeFromLibrary = async (courseId) => {
   if (!confirm('确定要从学习库中移除该课程吗？这将取消报名。')) return
   
   try {
-    const token = localStorage.getItem('token')
-    const API_BASE = 'http://localhost:4000'
-    
+    const token = getToken()
     console.log(`🗑️ 移除课程 ${courseId}，调用接口: ${API_BASE}/api/personal/library/${courseId}/toggle`)
-    
+
     const res = await fetch(`${API_BASE}/api/personal/library/${courseId}/toggle`, {
       method: 'POST',
       headers: { 
@@ -274,9 +334,8 @@ const removeFromFavorites = async (courseId) => {
   if (!confirm('确定要取消收藏该课程吗？')) return
   
   try {
-    const token = localStorage.getItem('token')
-    const API_BASE = 'http://localhost:4000'
-    
+    const token = getToken()
+
     const res = await fetch(`${API_BASE}/api/personal/favorites/${courseId}/toggle`, {
       method: 'POST',
       headers: { 
@@ -308,10 +367,8 @@ const loadLibraryCourses = async () => {
       return
     }
     
-    const API_BASE = 'http://localhost:4000'
-    
     console.log('📚 加载学习库课程，调用接口:', `${API_BASE}/api/personal/library`)
-    
+
     const res = await fetch(`${API_BASE}/api/personal/library`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
@@ -357,10 +414,8 @@ const loadCollectCourses = async () => {
       return
     }
     
-    const API_BASE = 'http://localhost:4000'
-    
     console.log('❤️ 加载收藏课程，调用接口:', `${API_BASE}/api/personal/favorites`)
-    
+
     const res = await fetch(`${API_BASE}/api/personal/favorites`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
@@ -447,6 +502,74 @@ const getCourseCover = (course) => {
   return 'linear-gradient(135deg,#ffecd2,#fcb69f)'
 }
 
+// 加载已获取的成就
+const loadAchievements = async () => {
+  try {
+    const token = getToken()
+    console.log('🏆 加载成就，调用接口:', `${API_BASE}/api/personal/achievements`)
+    const res = await fetch(`${API_BASE}/api/personal/achievements`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+    })
+
+    if (!res.ok) {
+      console.warn('成就接口返回错误状态:', res.status)
+      achievements.value = []
+      return
+    }
+
+    const data = await res.json()
+    if (data && data.success && Array.isArray(data.data)) {
+      achievements.value = data.data.map(a => ({
+        id: a.id || a.achievement_id || a.key,
+        title: a.title || a.name || a.label,
+        description: a.description || a.desc || '',
+        icon: a.icon || a.icon_class || 'fas fa-trophy'
+      }))
+      console.log(`🏆 加载到 ${achievements.value.length} 个成就`)
+    } else {
+      achievements.value = []
+    }
+  } catch (error) {
+    console.error('加载成就失败:', error)
+    achievements.value = []
+  }
+}
+
+// 加载用户的学习列表（在个人中心显示）
+const loadLearningList = async () => {
+  try {
+    const token = getToken()
+    console.log('📘 加载我的学习列表，调用接口:', `${API_BASE}/api/personal/my-courses`)
+    const res = await fetch(`${API_BASE}/api/personal/my-courses`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+    })
+
+    if (!res.ok) {
+      console.warn('我的课程接口返回错误状态:', res.status)
+      learningList.value = []
+      return
+    }
+
+    const data = await res.json()
+    if (data && data.success && Array.isArray(data.data)) {
+      learningList.value = data.data.map(c => ({
+        id: c.course_id || c.id,
+        title: c.course_name || c.title || c.name,
+        desc: c.course_desc || c.description || '',
+        progress: c.progress || c.completion_rate || 0,
+        add_time: c.enroll_time ? new Date(c.enroll_time).toLocaleDateString() : (c.add_time ? new Date(c.add_time).toLocaleDateString() : '未知时间'),
+        bg: c.cover_img ? (c.cover_img.startsWith('http') ? `url(${c.cover_img})` : `url(${API_BASE}${c.cover_img})`) : 'linear-gradient(135deg,#a8edea,#fed6e3)'
+      }))
+      console.log(`📘 加载到 ${learningList.value.length} 个学习项`)
+    } else {
+      learningList.value = []
+    }
+  } catch (error) {
+    console.error('加载我的学习列表失败:', error)
+    learningList.value = []
+  }
+}
+
 onMounted(async () => {
   console.log('🎓 学生个人中心加载中...')
   
@@ -469,6 +592,9 @@ onMounted(async () => {
     await user.fetchLearningStats()
     console.log('✅ 学习统计获取完成:', user.learningStats)
     
+    // 计算用户等级
+    calculateLevel()
+    
     // 加载学习库课程
     console.log('📚 加载学习库课程...')
     await loadLibraryCourses()
@@ -476,6 +602,14 @@ onMounted(async () => {
     // 加载收藏课程
     console.log('❤️ 加载收藏课程...')
     await loadCollectCourses()
+    
+    // 加载成就
+    console.log('🏆 加载成就...')
+    await loadAchievements()
+
+    // 加载我的学习列表
+    console.log('📘 加载我的学习列表...')
+    await loadLearningList()
     
     console.log('✅ 学生数据加载完成')
     

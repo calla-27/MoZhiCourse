@@ -35,8 +35,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../../stores/user.js'  // 改为正确的路径
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const keyword = ref('')
 
@@ -51,6 +53,28 @@ const userName = computed(() => {
   }
 })
 
+// 获取用户角色
+const userRole = computed(() => {
+  try {
+    // 1. 优先从userStore获取（最新）
+    if (userStore.role) {
+      return userStore.role
+    }
+    
+    // 2. 尝试从localStorage获取
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) return 'learner'
+    
+    const user = JSON.parse(storedUser)
+    
+    // 支持多种可能的role字段名称
+    return user.role || user.user_role || user.userRole || 'learner'
+  } catch (e) {
+    console.error('获取用户角色失败:', e)
+    return 'learner'
+  }
+})
+
 const avatar = computed(() => {
   return userName.value ? userName.value.charAt(0) : '用'
 })
@@ -58,7 +82,6 @@ const avatar = computed(() => {
 const handleSearch = () => {
   const q = keyword.value.trim()
   if (!q) return
-  // 跳转到首页并传递搜索参数
   router.push({
     path: '/',
     query: { q }
@@ -68,6 +91,7 @@ const handleSearch = () => {
 const handleLogout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
+  userStore.clearUserData()
   router.push('/login')
 }
 
@@ -76,7 +100,40 @@ const goHome = () => {
 }
 
 const goToPersonalCenter = () => {
-  router.push('/personal')
+  console.log('👤 点击个人中心头像...')
+  
+  // 直接从token获取角色
+  const token = localStorage.getItem('token')
+  if (!token) {
+    console.log('❌ 没有token，跳转到登录页')
+    router.push('/login')
+    return
+  }
+  
+  // 解码token
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+    const decoded = JSON.parse(jsonPayload)
+    
+    const role = decoded.role || 'learner'
+    console.log('🎯 HeaderNav中的用户角色:', role)
+    
+    if (role === 'instructor' || role === 'teacher') {
+      console.log('🚀 跳转到教师中心')
+      router.push('/personal/teacher')
+    } else {
+      console.log('🚀 跳转到学生中心')
+      router.push('/personal/student')
+    }
+  } catch (err) {
+    console.error('❌ 解码token失败:', err)
+    // 如果解码失败，跳转到统一入口
+    router.push('/personal')
+  }
 }
 </script>
 

@@ -1,5 +1,6 @@
 // models/UserCourseModel.js
 const { pool } = require('../config/database');
+const CourseStatsUpdater = require('../utils/courseStatsUpdater');
 
 class UserCourseModel {
   // 获取用户课程关系
@@ -23,11 +24,8 @@ class UserCourseModel {
       [userId, courseId]
     );
 
-    // 更新课程学生人数
-    await pool.execute(
-      `UPDATE course SET student_count = student_count + 1 WHERE course_id = ?`,
-      [courseId]
-    );
+    // 实时更新课程统计数据
+    await CourseStatsUpdater.onStudentEnroll(courseId, userId);
 
     return { id: result.insertId, user_id: userId, course_id: courseId };
   }
@@ -146,6 +144,7 @@ class UserCourseModel {
     if (learnDuration > 0) {
       updateFields.push('total_learn_duration = total_learn_duration + ?');
       updateValues.push(learnDuration);
+      console.log(`📚 累加学习时长: +${learnDuration}秒`);
     }
 
     updateFields.push('last_learn_time = NOW()');
@@ -197,11 +196,8 @@ class UserCourseModel {
     );
 
     if (result.affectedRows > 0) {
-      // 更新课程学生人数
-      await pool.execute(
-        `UPDATE course SET student_count = GREATEST(student_count - 1, 0) WHERE course_id = ?`,
-        [courseId]
-      );
+      // 实时更新课程统计数据
+      await CourseStatsUpdater.onStudentUnenroll(courseId, userId);
     }
 
     return result.affectedRows > 0;

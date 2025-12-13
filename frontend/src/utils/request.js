@@ -1,9 +1,12 @@
 import axios from 'axios'
 
-// 创建axios实例 - 修改端口为4000
+// 创建axios实例：统一走课程中心后端 server.js
+// 当前后端实际运行地址为 http://localhost:4000，且挂载前缀为 /api
+// 因此前端统一使用 baseURL = http://localhost:4000/api
+// 各模块中的 url 只需要写成 /auth/...、/courses/...、/community/... 等即可。
 const request = axios.create({
-  baseURL: 'http://localhost:4000/api', 
-  timeout: 10000,
+  baseURL: 'http://localhost:4000/api',
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }

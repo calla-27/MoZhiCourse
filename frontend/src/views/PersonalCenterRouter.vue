@@ -2,7 +2,7 @@
   <div class="personal-center-router">
     <div v-if="loading" class="loading">
       <i class="fas fa-spinner fa-spin"></i>
-      <p>正在加载个人中心...</p>
+      <p>正在跳转到个人中心...</p>
     </div>
     <div v-else-if="error" class="error">
       <i class="fas fa-exclamation-triangle"></i>
@@ -15,10 +15,8 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user.js'
 
 const router = useRouter()
-const userStore = useUserStore()
 const loading = ref(true)
 const error = ref('')
 
@@ -26,35 +24,81 @@ onMounted(async () => {
   await routeToCorrectCenter()
 })
 
+// 解码JWT token的简单函数
+function decodeJWT(token) {
+  try {
+    if (!token) return null
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+    return JSON.parse(jsonPayload)
+  } catch (err) {
+    console.error('解码JWT失败:', err)
+    return null
+  }
+}
+
 async function routeToCorrectCenter() {
   try {
     loading.value = true
     error.value = ''
     
-    // 检查是否有token
+    console.log('🚀 PersonalCenterRouter开始执行...')
+    
+    // 直接从localStorage获取用户信息
+    const userStr = localStorage.getItem('user')
     const token = localStorage.getItem('token')
+    
     if (!token) {
+      console.log('❌ 没有token，跳转到登录页')
       router.push('/login')
       return
     }
-
-    // 获取用户信息
-    await userStore.fetchUserProfile()
     
-    // 根据用户角色跳转
-    const userRole = userStore.role
-    console.log('用户角色:', userRole)
+    let finalRole = 'learner'
     
-    if (userRole === 'instructor' || userRole === 'teacher') {
-      // 教师跳转到教师中心
+    // 方法1: 从localStorage获取
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        finalRole = user.role || 'learner'
+        console.log('📦 从localStorage获取的角色:', finalRole)
+      } catch (e) {
+        console.error('解析localStorage用户信息失败:', e)
+      }
+    }
+    
+    // 方法2: 如果localStorage中没有，解码token
+    if (finalRole === 'learner') {
+      try {
+        const decoded = decodeJWT(token)
+        if (decoded) {
+          finalRole = decoded.role || 'learner'
+          console.log('🎯 从token解码的角色:', finalRole)
+        }
+      } catch (e) {
+        console.error('解码token失败:', e)
+      }
+    }
+    
+    console.log('🎯 最终确定的用户角色:', finalRole)
+    
+    // 等待一小段时间确保路由系统就绪
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 根据角色跳转
+    if (finalRole === 'instructor' || finalRole === 'teacher') {
+      console.log('🚀 跳转到教师中心')
       router.replace('/personal/teacher')
     } else {
-      // 学生跳转到学生中心
+      console.log('🚀 跳转到学生中心')
       router.replace('/personal/student')
     }
     
   } catch (err) {
-    console.error('路由到个人中心失败:', err)
+    console.error('❌ 路由到个人中心失败:', err)
     error.value = err.message || '加载失败，请重试'
     loading.value = false
   }

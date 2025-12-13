@@ -1,3 +1,4 @@
+<!-- 课程中心 首页 -->
 <template>
   <HomeView
     :search-query="searchQuery"
@@ -276,3 +277,27 @@ watch(
   }
 )
 </script>
+
+<style>
+:root{
+  --mz-primary: rgb(66,180,246);
+  --mz-primary-dark: #12a7d9;
+  /* 更柔和的垂直渐变背景，提供轻微层次感 */
+  --page-bg: linear-gradient(180deg, #fbfdff 0%, #f6fbff 40%, #f2f8ff 100%);
+  --page-hero-accent: rgba(66,180,246,0.06);
+}
+
+.search-results {
+  background: var(--page-bg);
+  /* 轻微内阴影让内容区悬浮感更好 */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.section-title { color: #073b6b; }
+
+.courses-grid { gap: 22px; }
+
+/* 兼容 CourseCard 的外层样式 */
+.course-card .card-shell{ background: #f9fbfe; }
+
+</style>

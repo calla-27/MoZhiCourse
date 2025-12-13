@@ -1,50 +1,54 @@
 <template>
   <div class="course-detail">
-    <!-- 课程头部 -->
+    <!-- 课程头部：左右两栏，左侧封面，右侧信息和操作 -->
     <section class="course-header">
       <div class="container">
-        <div class="course-info">
-          <span class="course-category">{{ course.categoryName }}</span>
-          <h1>{{ course.title }}</h1>
-          <p class="course-description">{{ course.description }}</p>
-          <div class="course-meta">
-            <div class="meta-item">
-              <i class="fas fa-star"></i>
-              <span>{{ course.rating }} ({{ course.reviewCount }} 评价)</span>
+        <div class="course-header-grid">
+          <div class="course-cover" :style="getCoverStyle()" aria-hidden="true"></div>
+
+          <div class="course-info">
+            <span class="course-category">{{ course.categoryName }}</span>
+            <h1>{{ course.title }}</h1>
+            <p class="course-description">{{ course.description }}</p>
+            <div class="course-meta">
+              <div class="meta-item">
+                <i class="fas fa-star"></i>
+                <span>{{ course.rating }} ({{ course.reviewCount }} 评价)</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-users"></i>
+                <span>{{ course.studentCount }} 名学生</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-clock"></i>
+                <span>{{ course.duration }} 小时</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-signal"></i>
+                <span>{{ course.difficulty }}</span>
+              </div>
             </div>
-            <div class="meta-item">
-              <i class="fas fa-users"></i>
-              <span>{{ course.studentCount }} 名学生</span>
+            <div class="course-actions">
+              <!-- 报名/开始学习按钮（保持原有事件与行为） -->
+              <button 
+                class="btn btn-primary" 
+                @click="$emit('enroll-course')"
+                :disabled="isTogglingLibrary"
+              >
+                <i :class="isEnrolled ? 'fas fa-play' : 'fas fa-pen-alt'"></i>
+                {{ isTogglingLibrary ? '处理中...' : (isEnrolled ? '开始学习' : '立即报名') }}
+              </button>
+
+              <!-- 收藏按钮 -->
+              <button 
+                class="btn btn-secondary" 
+                :class="{ 'btn-secondary-active': isFavorite }" 
+                @click="$emit('toggle-favorite')"
+              >
+                <i :class="isFavorite ? 'fas fa-heart' : 'far fa-heart'"></i>
+                收藏
+              </button>
             </div>
-            <div class="meta-item">
-              <i class="fas fa-clock"></i>
-              <span>{{ course.duration }} 小时</span>
-            </div>
-            <div class="meta-item">
-              <i class="fas fa-signal"></i>
-              <span>{{ course.difficulty }}</span>
-            </div>
-          </div>
-          <div class="course-actions">
-            <!-- 修改：移除原来的两个按钮，改为单个报名/开始学习按钮 -->
-            <button 
-              class="btn btn-primary" 
-              @click="$emit('enroll-course')"
-              :disabled="isTogglingLibrary"
-            >
-              <i :class="isEnrolled ? 'fas fa-play' : 'fas fa-pen-alt'"></i>
-              {{ isTogglingLibrary ? '处理中...' : (isEnrolled ? '开始学习' : '立即报名') }}
-            </button>
-            
-            <!-- 修改：保留收藏按钮 -->
-            <button 
-              class="btn btn-secondary" 
-              :class="{ 'btn-secondary-active': isFavorite }" 
-              @click="$emit('toggle-favorite')"
-            >
-              <i :class="isFavorite ? 'fas fa-heart' : 'far fa-heart'"></i>
-              收藏
-            </button>
           </div>
         </div>
       </div>
@@ -292,7 +296,7 @@
         <h2 class="section-title">相关课程推荐</h2>
         <div class="related-courses">
           <CourseCard 
-            v-for="relatedCourse in relatedCourses" 
+            v-for="relatedCourse in (relatedCourses || []).slice(0, 3)" 
             :key="relatedCourse.id"
             :course="relatedCourse"
           />
@@ -304,8 +308,9 @@
 
 <script setup>
 import CourseCard from '@/components/course/CourseCard.vue'
+import { computed, toRefs } from 'vue'
 
-defineProps({
+const props = defineProps({
   course: Object,
   instructor: Object,
   chapters: Array,
@@ -322,6 +327,9 @@ defineProps({
   newReviewContent: String,
   isSubmitting: Boolean
 })
+
+// 导出为响应式引用，模板和脚本都可以安全使用 `course` 等变量
+const { course, instructor, chapters, reviews, relatedCourses, courseOverview, learningObjectives, courseFeatures, activeTab, isFavorite, isEnrolled, isTogglingLibrary, newRating, newReviewContent, isSubmitting } = toRefs(props)
 
 defineEmits([
   'update:active-tab',
@@ -341,6 +349,47 @@ const tabs = [
   { id: 'instructor', name: '讲师介绍' },
   { id: 'reviews', name: '学生评价' }
 ]
+
+// 与 CourseCard.vue 保持一致的图片处理逻辑（优先使用 course.image，再兼容其他字段）
+const isPlaceholderDomain = (url) => {
+  if (!url || typeof url !== 'string') return false
+  const host = url.replace(/^https?:\/\//, '').split('/')[0]
+  const blocked = [
+    'via.placeholder.com',
+    'placehold.it',
+    'placehold.co'
+  ]
+  return blocked.some(b => host.includes(b))
+}
+
+// 运行时计算封面样式，避免首次渲染时使用旧值导致回退
+const getCoverStyle = () => {
+  // 兼容父组件传入的 `course` 既可能是普通对象也可能是 ref
+  const courseObj = (course && course.value) ? course.value : course
+  const img = (typeof courseObj === 'object' && (courseObj.image || courseObj.cover_img || courseObj.imageUrl || courseObj.cover || courseObj.coverUrl)) || ''
+  // 调试输出，便于排查时序问题
+  console.log('🧭 CourseDetailView.getCoverStyle img raw:', img)
+  let imageUrl = img
+  const isPlaceholder = isPlaceholderDomain(imageUrl)
+  console.log('🧭 isPlaceholderDomain:', isPlaceholder)
+  if (!imageUrl || isPlaceholder) {
+    console.log('🧭 fallback to default course image')
+    imageUrl = '/default-course.svg'
+  }
+
+  if (typeof imageUrl === 'string' && (imageUrl.startsWith('http') || imageUrl.startsWith('/'))) {
+    return {
+      backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.08)), url(${imageUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }
+  }
+
+  return {
+    background: 'linear-gradient(135deg, #667eea, #764ba2)'
+  }
+}
 </script>
 
 <style scoped>
@@ -351,23 +400,48 @@ const tabs = [
 
 /* 课程头部样式 */
 .course-header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  /* 更柔和的头部背景，减少视觉突兀 */
+  background: linear-gradient(180deg, #5b7be6 0%, #8fa9ff 60%, #eef4ff 100%);
   color: white;
   padding: 40px 0;
   margin-bottom: 30px;
+  /* 轻微叠层暗角，增强可读性同时不突兀 */
+  box-shadow: inset 0 -40px 80px rgba(24, 35, 58, 0.06);
 }
 
-.course-info {
-  max-width: 800px;
+.course-header-grid{
+  display:flex;
+  gap:24px;
+  align-items:stretch;
+}
+.course-cover{
+  flex:1;
+  min-height:260px;
+  border-radius:12px;
+  overflow:hidden;
+  background-size:cover;
+  background-position:center;
+  box-shadow: 0 10px 30px rgba(16,40,60,0.12);
+}
+.course-info{ flex:1 }
+
+@media (max-width: 992px){
+  .course-header-grid{ flex-direction:column }
+  .course-cover{ min-height:200px }
 }
 
 .course-category {
-  background: rgba(255,255,255,0.2);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  display: inline-block;
-  margin-bottom: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.9);
+  color: #1a73e8;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
 }
 
 .course-info h1 {
@@ -390,11 +464,31 @@ const tabs = [
 }
 
 .meta-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.95);
 }
+
+.meta-item i {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.meta-item:nth-child(1) i { color: #f9ab00; background: rgba(249,171,0,0.18); border-color: rgba(249,171,0,0.35); }
+.meta-item:nth-child(2) i { color: rgb(60, 220, 102); background: rgba(52,168,83,0.18); border-color: rgba(52,168,83,0.35); }
+.meta-item:nth-child(3) i { color: #1a73e8; background: rgba(26,115,232,0.18); border-color: rgba(26,115,232,0.35); }
+.meta-item:nth-child(4) i { color: #9c27b0; background: rgba(156,39,176,0.18); border-color: rgba(156,39,176,0.35); }
+
 
 .course-actions {
   display: flex;

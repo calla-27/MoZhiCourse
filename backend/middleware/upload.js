@@ -5,6 +5,8 @@ const fs = require('fs');
 // 确保上传目录存在
 const uploadDir = path.join(__dirname, '../uploads');
 const avatarDir = path.join(uploadDir, 'avatars');
+const roomAvatarDir = path.join(uploadDir, 'room-avatars');
+const videoDir = path.join(uploadDir, 'videos');
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -12,8 +14,14 @@ if (!fs.existsSync(uploadDir)) {
 if (!fs.existsSync(avatarDir)) {
   fs.mkdirSync(avatarDir, { recursive: true });
 }
+if (!fs.existsSync(roomAvatarDir)) {
+  fs.mkdirSync(roomAvatarDir, { recursive: true });
+}
+if (!fs.existsSync(videoDir)) {
+  fs.mkdirSync(videoDir, { recursive: true });
+}
 
-// 头像上传配置
+// 用户头像上传配置
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, avatarDir);
@@ -27,8 +35,34 @@ const avatarStorage = multer.diskStorage({
   }
 });
 
-// 文件过滤器
-const fileFilter = (req, file, cb) => {
+// 自习室头像上传配置
+const roomAvatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, roomAvatarDir);
+  },
+  filename: (req, file, cb) => {
+    const roomId = req.params.roomId || 'room';
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    cb(null, `room_${roomId}_${timestamp}${ext}`);
+  }
+});
+
+// 视频上传配置
+const videoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, videoDir);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    cb(null, `video_${timestamp}_${randomStr}${ext}`);
+  }
+});
+
+// 图片文件过滤器
+const imageFilter = (req, file, cb) => {
   // 检查文件类型
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -37,15 +71,45 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// 头像上传中间件
+// 视频文件过滤器
+const videoFilter = (req, file, cb) => {
+  // 检查文件类型
+  if (file.mimetype.startsWith('video/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('只能上传视频文件'), false);
+  }
+};
+
+// 用户头像上传中间件
 const uploadAvatar = multer({
   storage: avatarStorage,
-  fileFilter: fileFilter,
+  fileFilter: imageFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
     files: 1
   }
 }).single('avatar');
+
+// 自习室头像上传中间件
+const uploadRoomAvatarMiddleware = multer({
+  storage: roomAvatarStorage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1
+  }
+}).single('avatar');
+
+// 视频上传中间件
+const uploadVideoMiddleware = multer({
+  storage: videoStorage,
+  fileFilter: videoFilter,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB
+    files: 1
+  }
+}).single('video');
 
 // 错误处理包装器
 const handleUpload = (uploadMiddleware) => {
@@ -80,5 +144,7 @@ const handleUpload = (uploadMiddleware) => {
 };
 
 module.exports = {
-  uploadAvatar: handleUpload(uploadAvatar)
+  uploadAvatar: handleUpload(uploadAvatar),
+  uploadRoomAvatar: handleUpload(uploadRoomAvatarMiddleware),
+  uploadVideo: handleUpload(uploadVideoMiddleware)
 };

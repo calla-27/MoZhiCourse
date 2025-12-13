@@ -511,48 +511,87 @@
           </button>
         </div>
 
-        <div class="teachers-grid">
-          <div class="teacher-card" v-for="t in qaTeachers" :key="t.post_id">
-            <div class="teacher-avatar">
-              {{ t.user_name && t.user_name[0] }}
+        <!-- 名师列表 -->
+        <div class="instructor-grid">
+          <div class="instructor-card" v-for="teacher in topTeachers" :key="teacher.user_id">
+            <div class="instructor-media">
+              <div class="instructor-avatar" v-if="teacher.avatar">
+                <img :src="getAvatarUrl(teacher.avatar)" alt="avatar" />
+              </div>
+              <div class="instructor-avatar" v-else>
+                <i class="fas fa-user"></i>
+              </div>
             </div>
-            <div class="teacher-name">{{ t.user_name }}</div>
-            <div class="teacher-title">{{ t.course_name }}</div>
-            <p class="teacher-desc">{{ t.content }}</p>  
-            <div class="teacher-stats">
-              <div class="teacher-stat">
-                <div class="teacher-stat-value">{{ t.like_count }}</div>
-                <div class="teacher-stat-label">点赞</div>
+            <div class="instructor-body">
+              <div class="instructor-name">{{ teacher.user_name }}</div>
+              <div class="instructor-desc">{{ teacher.user_intro || '暂无简介' }}</div>
+              <div class="instructor-stats">
+                <div class="stat">
+                  <span class="stat-label">学生</span>
+                  <span class="stat-value">{{ teacher.total_students || 0 }}</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">课程</span>
+                  <span class="stat-value">{{ teacher.course_count || 0 }}</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">评分</span>
+                  <span class="stat-value">{{ teacher.avg_rating ? Number(teacher.avg_rating).toFixed(1) : '-' }}</span>
+                </div>
               </div>
-              <div class="teacher-stat">
-                <div class="teacher-stat-value">{{ t.comment_count }}</div>
-                <div class="teacher-stat-label">回答</div>
-              </div>
-              <div class="teacher-stat">
-                <div class="teacher-stat-value">
+              <button class="btn btn-primary btn-full" @click="askTeacher(teacher)">
+                <i class="fas fa-comment-dots"></i>
+                向TA提问
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 问答列表 -->
+        <div class="qa-section" v-if="qaTeachers.length > 0">
+          <h3 class="sub-title">最新问答</h3>
+          <div class="qa-list">
+            <div class="qa-card" v-for="t in qaTeachers" :key="t.post_id">
+              <div class="qa-header">
+                <div class="qa-avatar">{{ t.user_name && t.user_name[0] }}</div>
+                <div class="qa-info">
+                  <div class="qa-user">{{ t.user_name }}</div>
+                  <div class="qa-course">{{ t.course_name }}</div>
+                </div>
+                <div class="qa-status" :class="t.status === 'closed' ? 'solved' : 'unsolved'">
                   {{ t.status === 'closed' ? '已解决' : '待解决' }}
                 </div>
-                <div class="teacher-stat-label">状态</div>
+              </div>
+              <div class="qa-content">
+                <h4>{{ t.title }}</h4>
+                <p>{{ t.content }}</p>
+              </div>
+              <div class="qa-footer">
+                <div class="qa-stats">
+                  <span><i class="fas fa-thumbs-up"></i> {{ t.like_count || 0 }}</span>
+                  <span><i class="fas fa-comment"></i> {{ t.comment_count || 0 }}</span>
+                </div>
+                <div class="qa-actions">
+                  <button class="btn btn-secondary btn-small" @click="openQaPost(t)">
+                    查看详情
+                  </button>
+                  <button
+                    v-if="!t.is_solved && t.is_owner"
+                    class="btn btn-secondary btn-small"
+                    @click="markSolved(t)"
+                  >
+                    标记已解决
+                  </button>
+                  <button
+                    v-if="t.is_owner"
+                    class="btn btn-secondary btn-small"
+                    @click="deleteQAPost(t)"
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
             </div>
-            <button class="btn btn-primary btn-full" @click="openQaPost(t)">
-              查看详情
-            </button>
-            <button
-              v-if="!t.is_solved && t.is_owner"
-              class="btn btn-secondary btn-full"
-              @click="markSolved(t)"
-            >
-              标记为已解决
-            </button>
-            <!-- 只有帖子作者能看到删除按钮 -->
-            <button
-              v-if="t.is_owner"
-              class="btn btn-secondary btn-full"
-              @click="deleteQAPost(t)"
-            >
-              删除
-            </button>
           </div>
         </div>
       </section>
@@ -706,6 +745,9 @@ export default {
         stats: null
       },
       
+      // 名师列表
+      topTeachers: [],
+      
       // 互助学习
       helpAnswers: {},
       newHelpAnswer: '',
@@ -807,7 +849,8 @@ export default {
         this.fetchRooms(),
         this.fetchDiscussionPosts(),
         this.fetchQATeachers(),
-        this.fetchQAHelp()
+        this.fetchQAHelp(),
+        this.fetchTopTeachers()
       ]);
     },
 
@@ -839,7 +882,10 @@ export default {
       if (tab === 'teams') this.fetchTeams();
       if (tab === 'study-rooms') this.fetchRooms();
       if (tab === 'discussion') this.fetchDiscussionPosts();
-      if (tab === 'teachers') this.fetchQATeachers();
+      if (tab === 'teachers') {
+        this.fetchTopTeachers();
+        this.fetchQATeachers();
+      }
       if (tab === 'help') this.fetchQAHelp();
     },
 
@@ -875,6 +921,52 @@ export default {
       this.availableData = data.data || this.availableData;
     },
 
+    /* 获取名师列表 */
+    async fetchTopTeachers() {
+      try {
+        const data = await this.apiRequest('/api/teachers/top?limit=8');
+        this.topTeachers = data.data || [];
+      } catch (error) {
+        console.error('获取名师列表失败:', error);
+        this.topTeachers = [];
+      }
+    },
+
+    // 获取头像URL
+    getAvatarUrl(avatar) {
+      if (!avatar) return '';
+      if (avatar.startsWith('http')) return avatar;
+      return `${API_BASE}${avatar}`;
+    },
+
+    // 向老师提问
+    async askTeacher(teacher) {
+      const title = window.prompt(`向 ${teacher.user_name} 老师提问，请输入问题标题:`);
+      if (!title) return;
+      
+      const content = window.prompt('请输入问题详情:');
+      if (!content) return;
+      
+      const payload = {
+        user_id: this.currentUserId,
+        title: title,
+        content: content,
+        course_id: null,
+        tags: ['提问', teacher.user_name]
+      };
+      
+      try {
+        await this.apiRequest('/api/community/qa-posts/teacher-question', {
+          method: 'POST',
+          body: payload
+        });
+        window.alert('问题提交成功！');
+        this.fetchQATeachers();
+      } catch (error) {
+        console.error('提问失败:', error);
+      }
+    },
+
     /* 学习小组 */
     async fetchTeams(page = 1) {
       let url = `/api/community/teams?page=${page}&limit=20&current_user_id=${this.currentUserId}`;
@@ -886,15 +978,11 @@ export default {
     },
 
     async viewTeamDetail(team) {
-      this.selectedTeam = null;
-      const detail = await this.apiRequest(
-        `/api/community/teams/${team.team_id}?current_user_id=${this.currentUserId}`
-      );
-      this.selectedTeam = detail.data;
-      const taskRes = await this.apiRequest(
-        `/api/community/tasks/teams/${team.team_id}/tasks`
-      );
-      this.teamTasks = taskRes.data || [];
+      // 完全跳转到新的组队详情页 StudyPair
+      this.$router.push({
+        name: 'StudyPair',
+        params: { teamId: team.team_id }
+      });
     },
 
     // 打开创建小组表单
@@ -1021,14 +1109,10 @@ export default {
     },
 
     async viewRoomDetail(room) {
-      const detail = await this.apiRequest(
-        `/api/community/rooms/${room.room_id}?current_user_id=${this.currentUserId}`
-      );
-      this.selectedRoom = detail.data;
-      const msgs = await this.apiRequest(
-        `/api/community/messages/${room.room_id}?page=1&limit=50`
-      );
-      this.roomMessages = msgs.data || [];
+      this.$router.push({
+        name: 'StudyRoom',
+        params: { roomId: room.room_id }
+      });
     },
 
     // 打开创建自习室表单
@@ -2571,5 +2655,244 @@ body {
 /* 确保社区页面不被全局导航栏遮挡 */
 .community {
   padding-top: 20px;
+}
+
+/* 名师答疑 - 讲师卡片样式（参照首页） */
+.instructor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.instructor-card {
+  background: #ffffff;
+  border: 1px solid rgba(14, 66, 120, 0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 14px rgba(11, 45, 70, 0.04);
+  transition: all 0.3s ease;
+}
+
+.instructor-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(11, 45, 70, 0.1);
+}
+
+.instructor-media {
+  background: #ffffff;
+  padding: 16px 16px 12px;
+}
+
+.instructor-avatar {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4a7fc1, #6b9bd1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 48px;
+  overflow: hidden;
+}
+
+.instructor-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.instructor-body {
+  padding: 8px 16px 16px;
+}
+
+.instructor-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #0b3757;
+  margin-bottom: 6px;
+}
+
+.instructor-desc {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 14px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.instructor-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.instructor-stats .stat {
+  flex: 1;
+  background: linear-gradient(135deg, #f0f5ff, #e8f0fe);
+  border: none;
+  padding: 10px 8px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.instructor-stats .stat-label {
+  display: block;
+  color: #6b7e90;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+}
+
+.instructor-stats .stat-value {
+  display: block;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* 问答列表样式 */
+.qa-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.qa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.qa-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.qa-card:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.qa-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.qa-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.qa-info {
+  flex: 1;
+}
+
+.qa-user {
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.qa-course {
+  font-size: 0.85rem;
+  color: var(--gray);
+}
+
+.qa-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.qa-status.solved {
+  background: rgba(52, 168, 83, 0.1);
+  color: var(--secondary);
+}
+
+.qa-status.unsolved {
+  background: rgba(234, 67, 53, 0.1);
+  color: var(--danger);
+}
+
+.qa-content h4 {
+  margin-bottom: 8px;
+  color: var(--dark);
+}
+
+.qa-content p {
+  color: var(--gray);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.qa-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.qa-stats {
+  display: flex;
+  gap: 15px;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.qa-stats span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.qa-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (min-width: 1200px) {
+  .instructor-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .instructor-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .qa-footer {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .qa-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
 </style>

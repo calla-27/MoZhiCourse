@@ -21,6 +21,7 @@ router.get('/:courseId/related', CourseController.getRelatedCourses);
 router.get('/video/:videoId', VideoController.getVideo);
 router.get('/video/:videoId/progress', authMiddleware, VideoController.getProgress);
 router.post('/video/progress', authMiddleware, VideoController.updateProgress);
+// 确保行为记录路由正确配置
 router.post('/video/behavior', authMiddleware, VideoController.recordBehavior);
 // 添加批量记录路由
 router.post('/video/behaviors/batch', authMiddleware, VideoController.recordBehaviorsBatch);

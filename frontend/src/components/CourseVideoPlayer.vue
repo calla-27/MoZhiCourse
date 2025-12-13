@@ -14,7 +14,7 @@
           @pause="handlePause"
           @ended="handleVideoEnd"
           @seeking="handleSeeking"
-          @ratechange="handleRateChange"
+          @ratechange="handleRateChangeEvent"
           @error="handleVideoError"
           @click="togglePlay"
         >
@@ -108,6 +108,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import courseApi from '@/api/courses'
 
 export default {
   name: 'CourseVideoPlayer',
@@ -119,6 +120,16 @@ export default {
     initialProgress: {
       type: Number,
       default: 0
+    },
+    videoId: {  // 添加videoId属性
+      type: Number,
+      required: false,
+      default: null
+    },
+    courseId: {  // 添加courseId属性
+      type: Number,
+      required: false,
+      default: null
     }
   },
   emits: ['progress-update', 'behavior-record'],
@@ -136,6 +147,7 @@ export default {
     const videoError = ref('')
     const videoKey = ref(0)
     const isDragging = ref(false)
+    const lastSpeed = ref(1)
 
     // 计算有效的视频URL
     const effectiveVideoUrl = computed(() => {
@@ -278,10 +290,11 @@ export default {
         progressPercentage.value = (currentTime.value / duration.value) * 100
       }
       
-      // 每5秒上报一次进度，避免频繁请求
+      // 每3秒上报一次进度，更频繁地更新
       const currentSeconds = Math.floor(currentTime.value)
-      if (currentSeconds > 0 && currentSeconds % 5 === 0 && currentSeconds !== lastProgressUpdate.value) {
+      if (currentSeconds > 0 && currentSeconds % 3 === 0 && currentSeconds !== lastProgressUpdate.value) {
         lastProgressUpdate.value = currentSeconds
+        console.log(`📊 视频播放进度: ${progressPercentage.value.toFixed(1)}%`);
         emit('progress-update', progressPercentage.value)
       }
     }
@@ -359,18 +372,77 @@ export default {
       document.addEventListener('touchend', stopDrag)
     }
 
-    const handleSpeedChange = () => {
+    const handleSpeedChange = async () => {
       if (!videoPlayer.value) return
-      videoPlayer.value.playbackRate = parseFloat(playbackRate.value)
+      
+      const newSpeed = parseFloat(playbackRate.value)
+      videoPlayer.value.playbackRate = newSpeed
+      
+      console.log(`🎚️ 倍速改变: ${newSpeed}x`)
+      
+      // 记录倍速行为
+      try {
+        const behaviorData = {
+          videoId: props.videoId,
+          courseId: props.courseId,
+          behaviorType: 'speed_change',
+          playSpeed: newSpeed,
+          currentTime: Math.floor(currentTime.value),
+          duration: Math.floor(duration.value),
+          progress: Math.floor(progressPercentage.value)
+        }
+        
+        // 发送到API
+        await courseApi.recordLearningBehavior(behaviorData)
+        console.log('✅ 倍速记录已发送到服务器')
+        
+        // 触发事件
+        emit('behavior-record', {
+          type: 'speed_change',
+          speed: newSpeed,
+          timestamp: new Date().toISOString()
+        })
+        
+      } catch (error) {
+        console.error('❌ 记录倍速数据失败:', error)
+      }
     }
 
     const handleSeeking = () => {
       console.log('视频跳转中...')
     }
 
-    const handleRateChange = () => {
+    const handleRateChangeEvent = async () => {
       if (!videoPlayer.value) return
-      playbackRate.value = videoPlayer.value.playbackRate
+      
+      const newSpeed = videoPlayer.value.playbackRate
+      playbackRate.value = newSpeed
+      
+      console.log(`🎚️ 检测到倍速变化: ${newSpeed}x`)
+      
+      // 避免重复记录
+      if (lastSpeed.value !== newSpeed) {
+        lastSpeed.value = newSpeed
+        
+        // 记录倍速行为
+        try {
+          const behaviorData = {
+            videoId: props.videoId,
+            courseId: props.courseId,
+            behaviorType: 'speed_change',
+            playSpeed: newSpeed,
+            currentTime: Math.floor(currentTime.value),
+            duration: Math.floor(duration.value),
+            progress: Math.floor(progressPercentage.value)
+          }
+          
+          await courseApi.recordLearningBehavior(behaviorData)
+          console.log('✅ 自动倍速记录已发送')
+          
+        } catch (error) {
+          console.error('❌ 自动记录倍速失败:', error)
+        }
+      }
     }
 
     const toggleFullscreen = () => {
@@ -419,6 +491,8 @@ export default {
       if (effectiveVideoUrl.value) {
         loading.value = true
       }
+
+      lastSpeed.value = videoPlayer.value?.playbackRate || 1
     })
 
     onUnmounted(() => {
@@ -478,12 +552,13 @@ export default {
       startDrag,
       handleSpeedChange,
       handleSeeking,
-      handleRateChange,
+      handleRateChange: handleRateChangeEvent,
       toggleFullscreen,
       handlePlay,
       handlePause,
       handleVideoError,
-      retryLoad
+      retryLoad,
+      lastSpeed
     }
   }
 }

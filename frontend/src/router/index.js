@@ -6,9 +6,12 @@ import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Home from '@/views/Home.vue' 
 import Community from '../views/Community.vue'
+import StudyPair from '../views/StudyPair.vue'
+import StudyRoom from '../views/StudyRoom.vue'
 import StudentCenter from '../views/StudentCenter.vue'
 import TeacherCenter from '../views/TeacherCenter.vue'
 import PersonalCenterRouter from '../views/PersonalCenterRouter.vue'
+import TeacherAnalysis from '../views/TeacherAnalysis.vue' // 新增导入
 
 const routes = [
   {
@@ -47,6 +50,22 @@ const routes = [
     component: Community
   },
   {
+    path: '/community/teams/:teamId',
+    name: 'StudyPair',
+    component: StudyPair,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/community/rooms/:roomId',
+    name: 'StudyRoom',
+    component: StudyRoom,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
     path: '/personal',
     name: 'PersonalCenterRouter',
     component: PersonalCenterRouter,
@@ -75,6 +94,7 @@ const routes = [
     }
   },
   // 学情分析路由 - 修正路径，确保与访问路径一致
+  // 允许教师通过viewAs=teacher参数查看学生数据
   {
     path: '/student/behavior',
     name: 'StudentBehaviorAnalysis',
@@ -82,7 +102,41 @@ const routes = [
     meta: {
       requiresAuth: true,
       title: '学习行为分析',
-      role: 'learner'
+      role: 'learner',
+      allowTeacherView: true  // 允许教师查看
+    }
+  },
+  // 教师学情分析页面 - 新增
+  {
+    path: '/teacher/analysis',
+    name: 'TeacherAnalysis',
+    component: TeacherAnalysis, // 使用直接导入，避免懒加载问题
+    meta: {
+      requiresAuth: true,
+      title: '教学数据分析',
+      role: 'instructor'
+    }
+  },
+  // 教师创建课程页面
+  {
+    path: '/teacher/course-create',
+    name: 'CourseCreate',
+    component: () => import('@/views/CourseCreate.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '创建课程',
+      role: 'instructor'
+    }
+  },
+  // 教师编辑课程页面
+  {
+    path: '/teacher/course-edit/:courseId',
+    name: 'CourseEdit',
+    component: () => import('@/views/CourseEdit.vue'),
+    meta: {
+      requiresAuth: true,
+      title: '编辑课程',
+      role: 'instructor'
     }
   },
   // 保持原有路径作为别名，确保兼容性
@@ -112,8 +166,8 @@ router.beforeEach((to, from, next) => {
   const isPublic = publicPaths.includes(to.path)
   const token = localStorage.getItem('token')
   
-  console.log(`路由跳转: ${from.path} -> ${to.path}`)
-  console.log(`Token状态: ${token ? '已登录' : '未登录'}`)
+  console.log(`🚀 路由跳转: ${from.path} -> ${to.path}`)
+  console.log(`🔑 Token状态: ${token ? '已登录' : '未登录'}`)
   
   // 如果是公开页面，直接放行
   if (isPublic) {
@@ -122,42 +176,67 @@ router.beforeEach((to, from, next) => {
 
   // 如果需要认证但没有 token，跳转到登录页
   if (!token) {
-    console.log('未授权访问，跳转到登录页')
+    console.log('❌ 未授权访问，跳转到登录页')
     return next({
       path: '/login',
       query: { redirect: to.fullPath },
     })
   }
 
-  // 获取用户角色（实际项目中应该从token解码或API获取）
+  // 获取用户角色 - 修正键名
   const getUserRole = () => {
     try {
-      // 从localStorage获取用户信息
-      const userInfoStr = localStorage.getItem('userInfo')
-      if (userInfoStr) {
-        const userInfo = JSON.parse(userInfoStr)
-        return userInfo.role || 'learner'
+      // 方法1: 从localStorage获取用户信息（正确的键名）
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        console.log('📦 从localStorage获取的用户角色:', user.role)
+        return user.role || 'learner'
       }
-      return 'learner'
+      
+      // 方法2: 如果localStorage中没有，尝试解码token获取
+      console.log('🔍 尝试从token解码获取角色...')
+      const base64Url = token.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      }).join(''))
+      const decoded = JSON.parse(jsonPayload)
+      
+      console.log('🎯 从token解码的角色:', decoded.role)
+      return decoded.role || 'learner'
+      
     } catch (error) {
-      console.error('获取用户角色失败:', error)
+      console.error('❌ 获取用户角色失败:', error)
       return 'learner'
     }
   }
 
   const userRole = getUserRole()
+  console.log(`🎯 当前用户角色: ${userRole}`)
+  console.log(`🎯 目标页面要求的角色: ${to.meta.role || '无要求'}`)
   
   // 检查角色权限
   if (to.meta.role && to.meta.role !== userRole) {
-    console.log(`权限不足: 需要${to.meta.role}角色，当前是${userRole}`)
+    // 特殊处理：允许教师通过viewAs=teacher参数查看学生数据分析页面
+    const isTeacherViewingStudent = 
+      to.meta.allowTeacherView && 
+      to.query.viewAs === 'teacher' && 
+      (userRole === 'instructor' || userRole === 'teacher')
     
-    // 根据用户角色重定向到对应的个人中心
-    if (userRole === 'learner') {
-      return next('/personal/student')
-    } else if (userRole === 'instructor') {
-      return next('/personal/teacher')
+    if (isTeacherViewingStudent) {
+      console.log('✅ 教师查看学生数据模式，放行')
     } else {
-      return next('/')
+      console.log(`🚫 权限不足: 需要${to.meta.role}角色，当前是${userRole}`)
+      
+      // 根据用户角色重定向到对应的个人中心
+      if (userRole === 'instructor' || userRole === 'teacher') {
+        console.log('🔄 重定向到教师中心')
+        return next('/personal/teacher')
+      } else {
+        console.log('🔄 重定向到学生中心')
+        return next('/personal/student')
+      }
     }
   }
 
@@ -168,7 +247,7 @@ router.beforeEach((to, from, next) => {
     document.title = '墨知课堂'
   }
 
-  console.log('路由放行')
+  console.log('✅ 路由放行')
   next()
 })
 

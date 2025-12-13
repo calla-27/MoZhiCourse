@@ -19,9 +19,11 @@ const personalCenterRoutes = require('./routes/personalCenter');
 const teacherCenterRoutes = require('./routes/teacherCenter');
 const userCoursesRoutes = require('./routes/userCourses'); // 新增：用户课程路由
 const studentBehaviorRoutes = require('./routes/studentBehaviorRoutes');
+const learningBehaviorRoutes = require('./routes/learningBehavior'); // 新增：学习行为路由
+const deepseekRouter = require('./routes/deepseek'); // ✅ 添加导入
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // 允许的跨域来源
 const defaultOrigins = [
@@ -57,7 +59,7 @@ app.use(cors({
     return callback(new Error(msg), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(express.json());
@@ -82,10 +84,14 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/comment', commentRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/personal', personalCenterRoutes);
-app.use('/api/teacher', teacherCenterRoutes);
-app.use('/api/user-courses', userCoursesRoutes); // 新增：用户课程路由
+app.use('/api/teacher-center', teacherCenterRoutes);
+app.use('/api/user-courses', userCoursesRoutes);
 app.use('/api/student/behavior', studentBehaviorRoutes);
+app.use('/api/learning-behavior', learningBehaviorRoutes); // 新增：学习行为路由
+app.use('/api/deepseek', deepseekRouter);
 
+// 在路由配置中添加 - 确保路径正确
+app.use('/api/deepseek', deepseekRouter);
 // 根路径 - API 文档首页
 app.get('/', (req, res) => {
   res.json({

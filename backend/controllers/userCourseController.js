@@ -223,7 +223,19 @@ class UserCourseController {
 
       const stats = await UserCourseModel.getUserLearningStats(userId);
 
-      res.json(successResponse(stats));
+      // 适配前端期望的字段名
+      const raw = stats || {};
+      const mapped = {
+        total_learning_hours: raw.total_learn_duration ? Number((raw.total_learn_duration / 60).toFixed(1)) : 0,
+        enrolled_courses: raw.total_courses || 0,
+        courses_completed: raw.completed_courses || 0,
+        continuous_days: raw.continuous_days || 0,
+        achievement_rate: raw.avg_progress ? Math.round(raw.avg_progress) : 0,
+        // 保留原始数据以供前端使用
+        _raw: raw
+      };
+
+      res.json({ success: true, data: mapped });
     } catch (error) {
       console.error('获取学习统计失败:', error);
       res.status(500).json(errorResponse('服务器内部错误'));
