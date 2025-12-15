@@ -1,11 +1,5 @@
 # 墨知课堂 - 智能在线教育平台
 
-![Version](https://img.shields.io/badge/version-v1.0.0-blue.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-green.svg)
-![Vue](https://img.shields.io/badge/vue-3.3.4-brightgreen.svg)
-![MySQL](https://img.shields.io/badge/mysql-8.0-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-yellow.svg)
-
 ## 📖 项目简介
 
 墨知课堂是一个功能完善的智能在线教育平台，采用前后端分离架构，集成了课程管理、学习行为分析、AI智能助手等核心功能。平台支持教师和学生双角色体系，提供完整的在线教学与学习解决方案。
