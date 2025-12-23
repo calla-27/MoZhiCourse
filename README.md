@@ -115,9 +115,7 @@ CREATE DATABASE mzcourse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 2. 导入数据库文件  
 ```bash
-# 进入后端目录
-cd backend
-# 导入 SQL 文件（确保 mzcourse.sql 文件位于 backend 目录或指定路径）
+# 导入 SQL 文件（确保 mzcourse.sql 文件位于根目录或指定路径）
 mysql -u root -p mzcourse < mzcourse.sql
 ```
 
